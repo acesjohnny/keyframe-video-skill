@@ -4,6 +4,8 @@ An [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) 
 
 The workflow applies to any keyframe-driven video model. It was written and verified against the Agnes video API (`agnes-video-2.5-flash`).
 
+**English** · [中文](README.zh.md)
+
 ## What it is actually for
 
 Most of the value is not "how to call a video API". It is the discipline around the call:
@@ -21,6 +23,8 @@ Copy the skill into your agent's skills directory, for example:
 mkdir -p ~/.claude/skills/keyframe-video-production
 cp SKILL.md ~/.claude/skills/keyframe-video-production/
 ```
+
+A Chinese edition is available as `SKILL.zh.md`.
 
 Then ask your agent for a short video demo from a scene, and it should pick this up.
 
