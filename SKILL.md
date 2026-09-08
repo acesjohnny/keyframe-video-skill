@@ -85,7 +85,7 @@ Assemble with a normalization pass (uniform scale, fps, pixel format; silent tra
 
 ### 6. Record
 
-Write down what was produced and, in its own section, what remains **unverified** — language verdict, billing, any anomaly — rather than burying it in prose. When the user later gives a verdict, write it back and say who judged it.
+Write down what was produced and, in its own section, record what remains **unverified** — language verdict, billing, any anomaly — rather than burying it in prose. When the user later gives a verdict, write it back and say who judged it.
 
 ## Round Isolation
 
