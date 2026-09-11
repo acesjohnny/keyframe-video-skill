@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1290" font-family="sans-serif"><rect width="100%" height="100%" fill="white"/>
+<rect x="8" y="8" width="964" height="414" fill="#fafafa" stroke="#ccc"/>
+<text x="20" y="30" font-size="14" font-weight="bold">taozhi</text>
+<text x="960" y="30" font-size="11" fill="#888" text-anchor="end">比例 1 单位 ≈ 9.2px</text>
+<path d="M440,74 L663,364 L392,437 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M495,166 L498,266 L457,259 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M614,184 L534,272 L503,228 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M366,321 L625,62 L732,327 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M504,376 L367,37 L687,59 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<rect x="436" y="70" width="8" height="8" fill="#06c"/><text x="440" y="64" font-size="11" fill="#06c" text-anchor="middle">A1</text>
+<rect x="491" y="162" width="8" height="8" fill="#06c"/><text x="495" y="184" font-size="11" fill="#06c" text-anchor="middle">A2</text>
+<rect x="610" y="180" width="8" height="8" fill="#06c"/><text x="614" y="174" font-size="11" fill="#06c" text-anchor="middle">A3</text>
+<rect x="362" y="317" width="8" height="8" fill="#06c"/><text x="366" y="339" font-size="11" fill="#06c" text-anchor="middle">A4</text>
+<rect x="500" y="372" width="8" height="8" fill="#06c"/><text x="504" y="366" font-size="11" fill="#06c" text-anchor="middle">A5</text>
+<circle cx="476" cy="220" r="7" fill="#2a8"/><text x="476" y="207" font-size="11" text-anchor="middle" fill="#164">huaqiangu-bug</text>
+<circle cx="540" cy="248" r="7" fill="#2a8"/><text x="540" y="269" font-size="11" text-anchor="middle" fill="#164">tangbao</text>
+<rect x="8" y="438" width="964" height="414" fill="#fafafa" stroke="#ccc"/>
+<text x="20" y="460" font-size="14" font-weight="bold">taozhi-over</text>
+<text x="960" y="460" font-size="11" fill="#888" text-anchor="end">比例 1 单位 ≈ 5.2px</text>
+<path d="M473,504 L797,766 L423,917 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M498,520 L536,882 L295,822 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M475,524 L746,680 L562,824 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M502,509 L624,908 L301,874 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M500,525 L608,927 L261,866 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M507,529 L287,751 L200,590 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M482,518 L647,782 L482,830 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M481,525 L766,652 L608,811 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<rect x="469" y="500" width="8" height="8" fill="#06c"/><text x="473" y="494" font-size="11" fill="#06c" text-anchor="middle">B1</text>
+<rect x="494" y="516" width="8" height="8" fill="#06c"/><text x="498" y="538" font-size="11" fill="#06c" text-anchor="middle">B2</text>
+<rect x="471" y="520" width="8" height="8" fill="#06c"/><text x="475" y="514" font-size="11" fill="#06c" text-anchor="middle">B3</text>
+<rect x="498" y="505" width="8" height="8" fill="#06c"/><text x="502" y="527" font-size="11" fill="#06c" text-anchor="middle">B4</text>
+<rect x="496" y="521" width="8" height="8" fill="#06c"/><text x="500" y="515" font-size="11" fill="#06c" text-anchor="middle">B5</text>
+<rect x="503" y="525" width="8" height="8" fill="#06c"/><text x="507" y="547" font-size="11" fill="#06c" text-anchor="middle">B6</text>
+<rect x="478" y="514" width="8" height="8" fill="#06c"/><text x="482" y="508" font-size="11" fill="#06c" text-anchor="middle">B7</text>
+<rect x="477" y="521" width="8" height="8" fill="#06c"/><text x="481" y="543" font-size="11" fill="#06c" text-anchor="middle">B8</text>
+<circle cx="489" cy="535" r="7" fill="#2a8"/><text x="489" y="522" font-size="11" text-anchor="middle" fill="#164">huaqiangu-bug</text>
+<circle cx="492" cy="537" r="7" fill="#2a8"/><text x="492" y="558" font-size="11" text-anchor="middle" fill="#164">tangbao</text>
+<circle cx="497" cy="764" r="7" fill="#2a8"/><text x="497" y="737" font-size="11" text-anchor="middle" fill="#164">banquet-crowd</text>
+<circle cx="484" cy="806" r="7" fill="#bbb" stroke="#888" stroke-dasharray="3,2"/><text x="484" y="841" font-size="11" text-anchor="middle" fill="#777">prop-zhuwei-empty</text>
+<rect x="8" y="868" width="964" height="414" fill="#fafafa" stroke="#ccc"/>
+<text x="20" y="890" font-size="14" font-weight="bold">yanxi</text>
+<text x="960" y="890" font-size="11" fill="#888" text-anchor="end">比例 1 单位 ≈ 6.4px</text>
+<path d="M455,1236 L349,1060 L561,1060 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M557,1075 L535,962 L587,964 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M496,1069 L444,952 L568,962 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M423,1043 L402,949 L443,949 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M535,1152 L512,1052 L565,1054 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M455,1063 L431,871 L478,871 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<path d="M455,992 L426,900 L483,900 Z" fill="#39f" fill-opacity="0.10" stroke="#39f" stroke-opacity="0.45"/>
+<rect x="451" y="1232" width="8" height="8" fill="#06c"/><text x="455" y="1226" font-size="11" fill="#06c" text-anchor="middle">C1</text>
+<rect x="553" y="1071" width="8" height="8" fill="#06c"/><text x="557" y="1093" font-size="11" fill="#06c" text-anchor="middle">C3</text>
+<rect x="492" y="1065" width="8" height="8" fill="#06c"/><text x="496" y="1059" font-size="11" fill="#06c" text-anchor="middle">C4</text>
+<rect x="419" y="1039" width="8" height="8" fill="#06c"/><text x="423" y="1061" font-size="11" fill="#06c" text-anchor="middle">C5</text>
+<rect x="531" y="1148" width="8" height="8" fill="#06c"/><text x="535" y="1142" font-size="11" fill="#06c" text-anchor="middle">C6</text>
+<rect x="451" y="1059" width="8" height="8" fill="#06c"/><text x="455" y="1081" font-size="11" fill="#06c" text-anchor="middle">C7</text>
+<rect x="451" y="988" width="8" height="8" fill="#06c"/><text x="455" y="982" font-size="11" fill="#06c" text-anchor="middle">C8</text>
+<circle cx="455" cy="934" r="7" fill="#bbb" stroke="#888" stroke-dasharray="3,2"/><text x="455" y="921" font-size="11" text-anchor="middle" fill="#777">prop-zhuwei-empty</text>
+<circle cx="423" cy="979" r="7" fill="#2a8"/><text x="423" y="1000" font-size="11" text-anchor="middle" fill="#164">donghua-shangxian</text>
+<circle cx="468" cy="992" r="7" fill="#2a8"/><text x="468" y="965" font-size="11" text-anchor="middle" fill="#164">qinglong</text>
+<circle cx="487" cy="992" r="7" fill="#2a8"/><text x="487" y="1027" font-size="11" text-anchor="middle" fill="#164">zhuque</text>
+<circle cx="509" cy="992" r="7" fill="#bbb" stroke="#888" stroke-dasharray="3,2"/><text x="509" y="951" font-size="11" text-anchor="middle" fill="#777">prop-baihu-seat-empty</text>
+<circle cx="529" cy="992" r="7" fill="#bbb" stroke="#888" stroke-dasharray="3,2"/><text x="529" y="1041" font-size="11" text-anchor="middle" fill="#777">prop-xuanwu-seat-empty</text>
+<circle cx="557" cy="1005" r="7" fill="#2a8"/><text x="557" y="992" font-size="11" text-anchor="middle" fill="#164">liehuo-xingjun</text>
+<circle cx="455" cy="1043" r="7" fill="#2a8"/><text x="455" y="1064" font-size="11" text-anchor="middle" fill="#164">crowd-immortals</text>
+<circle cx="525" cy="1082" r="7" fill="#2a8"/><text x="525" y="1055" font-size="11" text-anchor="middle" fill="#164">wuyue-sanren</text>
+<circle cx="545" cy="1082" r="7" fill="#2a8"/><text x="545" y="1117" font-size="11" text-anchor="middle" fill="#164">nanling-han</text>
+<circle cx="455" cy="1107" r="7" fill="#2a8"/><text x="455" y="1066" font-size="11" text-anchor="middle" fill="#164">xianbi-group</text>
+</svg>
