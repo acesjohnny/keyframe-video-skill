@@ -1,136 +1,140 @@
-# Keyframe Video Production — an Agent Skill
+# 关键帧视频制作 — 一个 Agent Skill
 
-**English** · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
+**简体中文** · [English](README.en.md) · [繁體中文](README.zh-Hant.md)
 
-An [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) for producing multi-shot AI videos in which every shot starts from a generated keyframe image — from analysing the source work, through storyboard and keyframes, to generated video and a finished, subtitled cut.
+> 各语言版本如有出入，以英文版为准。
 
-The workflow applies to any keyframe-driven video model. It was written and verified against the Agnes video API (`agnes-video-2.5-flash`).
+一个 [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills)，用于制作多镜头 AI 视频：每个镜头都从一张生成的关键帧图片开始。覆盖从分析原作、分镜、出关键帧，到生成视频、合成带字幕成片的全过程。
+
+适用于任何关键帧驱动的视频模型；基于 Agnes 视频 API（`agnes-video-2.5-flash`）编写并验证。
 
 <p align="center">
-  <a href="examples/kunlun-one-leaf/kunlun-one-leaf.mp4"><img src="examples/kunlun-one-leaf/preview.gif" width="480" alt="Three-shot sample: two spirit insects ride a leaf past a waterfall, dodge a great bird, and arrive at a jade pool"></a><br>
-  <sub>A 15-second, three-shot sample made with this workflow. Click for the MP4.</sub>
+  <a href="examples/tangbao-hatches/tangbao-hatches.mp4"><img src="examples/tangbao-hatches/preview.gif" width="480" alt="三镜头样片：夜里一枚发光的蛋裂开，小虫破壳睁眼，少女愣住"></a><br>
+  <sub>用这套流程做的 15 秒三镜头样片，带中文对白，点击查看 MP4。</sub>
 </p>
 
-## What it is actually for
+## 它真正解决的问题
 
-Most of the value is not "how to call a video API". It is the discipline around the call:
+价值不在「怎么调一个视频 API」，而在调用周围的纪律：
 
-- **Gates before spend.** Storyboard, blocking, prompts, character cards, keyframes and hosting each stop for approval, so the plan is approved before the money is spent — not a finished clip reviewed after it.
-- **Continuity by construction.** Character bibles are assembled into every prompt by script, never hand-copied. Identity comes from cards on a neutral grey background, stress-tested before the film depends on them. Who is in each shot is computed from camera geometry, not remembered.
-- **Honest verification.** An agent cannot hear. The skill gathers real evidence that speech exists and never lets it pass for a verdict on language or wording; it checks frames across the whole clip, not one; and it tests any automated detector against known-clean input before believing it.
-- **Failure modes that cost real time, written down** — a no-dialogue shot inventing its own stock line, an empty landscape shot filled by a presenter talking to camera, a retry blocked by its own duplicate-submission guard, a verification command's error payload read as "everything was deleted".
+- **先审批，后花钱。** 分镜、调度、提示词、角色卡、关键帧、托管，每一步都停下来等人批准——批准的是方案，而不是花完钱之后拿到一段不想要的成品再来评价。
+- **连续性靠结构保证。** 角色设定由脚本拼进每一条提示词，从不手抄；身份参考用中性灰底的角色卡，并在片子依赖它之前做压力测试；每个镜头里有谁，由摄影机的视野算出来，而不是靠记忆。
+- **诚实的验证。** Agent 听不见声音。这个 skill 只拿「确实有人在说话」的客观证据，绝不把它当成「说的语言和台词正确」的结论；检查贯穿整条片段的多个时间点，而不是一两帧；任何自动检测器都要先在已知干净的样本上验证，才能相信它。
+- **把真正耗过时间的坑写下来**——没有台词的镜头自己编出一句套话、空镜里冒出对着镜头讲话的主持人、重试被自己的防重复提交机制挡回、验证命令的报错被读成「全部被删了」。
 
-## The workflow
+## 工作流程
 
 ```mermaid
 flowchart LR
-    A["0 · Source analysis"] --> B["1 · Script & storyboard"]
-    B --> C["1.5 · Blocking"]
-    C --> D["2 · Prompts"]
-    D --> E["2.5 · Character cards"]
-    E --> F["3 · Keyframes"]
-    F --> G["4 · Hosting"]
-    G --> H["5 · Video tasks"]
-    H --> I["6 · Assembly & checks"]
-    I --> J["7 · Record"]
+    A["0 · 原作分析"] --> B["1 · 剧本与分镜"]
+    B --> C["1.5 · 调度"]
+    C --> D["2 · 提示词"]
+    D --> E["2.5 · 角色卡"]
+    E --> F["3 · 关键帧"]
+    F --> G["4 · 托管"]
+    G --> H["5 · 视频任务"]
+    H --> I["6 · 合成与检查"]
+    I --> J["7 · 记录"]
     classDef gate fill:#fff4d6,stroke:#c9a227,color:#222;
     class B,C,D,E,F,G gate;
 ```
 
-Highlighted stages are **gates**: the agent stops and waits for a human before going on.
+高亮的是**审批关**：到这里 Agent 会停下来，等人确认再往下走。
 
-| Stage | What goes in | What comes out | The discipline that matters |
+| 阶段 | 输入 | 产出 | 关键纪律 |
 |---|---|---|---|
-| **0 · Source analysis** (long works) | The source text, as a read-only working copy | Cast roster counted from the text, a character bible by look-stage with chapter citations, an episode map | Measure length and missing chapters first; count the cast instead of recalling it; never commit the source text |
-| **1 · Script & storyboard** | A scene or an episode's chapters | Beats, original dialogue, shot table | Borrow structure, not sentences |
-| **1.5 · Blocking** | The storyboard | Each scene's actors and cameras on a top-down plan; per-shot cast computed from each camera's field of view | Catches a speaker who is off camera — or a whole sequence of off-screen narration — before any image exists |
-| **2 · Prompts** | Asset blocks (style, scene, characters, voices) | One assembled prompt per shot, plus a bilingual review table | Blocks assembled by script; the spoken line in its own paragraph; every negative mirrors a decision this shot actually made; a no-dialogue shot gets its sound written out |
-| **2.5 · Character cards** | The bible | Front, back and face cards on neutral grey, then a stress test | Pass mark fixed **before** looking; a failing card is reworked, not the shots |
-| **3 · Keyframes** | Prompts + cards | One t = 0 image per shot | Reviewed by the agent first; failures reported as plainly as successes |
-| **4 · Hosting** | Approved keyframes | Temporary public URLs | Its own approval; upload directory scanned; every URL re-downloaded and hash-checked; production untouched |
-| **5 · Video tasks** | Hosted keyframes + prompts | One clip per shot | Job record written before submitting; every failure classified by its stored state before anything is retried |
-| **6 · Assembly & checks** | Clips + script | The finished cut with subtitles | Durations probed, never assumed; loudness per shot type; subtitles drawn by the pipeline, never by the model; frames checked across time; the language verdict left to a human ear |
-| **7 · Record** | Everything above | A production log | What is still unverified gets its own section |
+| **0 · 原作分析**（长篇作品） | 原作文本（只读工作副本） | 从原文统计出的角色名单、按形象阶段写并标注章节的角色圣经、分集对照表 | 先量篇幅、查缺章；角色靠统计不靠记忆；原文不入库 |
+| **1 · 剧本与分镜** | 一场戏或一集对应的章节 | 剧情节拍、原创台词、镜头表 | 借结构，不借句子 |
+| **1.5 · 调度** | 分镜 | 每个场景的演员与机位俯视图；由每台摄影机的视野算出的每镜出场名单 | 在出第一张图之前，就能抓出「说话人不在画面里」，甚至整段画外旁白 |
+| **2 · 提示词** | 资产块（画风、场景、角色、声音） | 每镜一条拼装好的提示词，外加中英对照审阅表 | 块由脚本拼装；台词单独成段；每条负面约束都对应本镜自己做过的决定；无台词镜头要把声音写出来 |
+| **2.5 · 角色卡** | 角色圣经 | 中性灰底的正面、背面、面部特写卡，以及压力测试 | 及格线在看图**之前**定；不及格返工卡，不返工镜头 |
+| **3 · 关键帧** | 提示词 + 角色卡 | 每镜一张 t = 0 的图 | Agent 先自己看；问题和优点一样直说 |
+| **4 · 托管** | 已批准的关键帧 | 临时公开网址 | 单独审批；上传目录先扫描；每个网址重新下载比对哈希；生产环境不动 |
+| **5 · 视频任务** | 已托管的关键帧 + 提示词 | 每镜一段视频 | 提交前先写任务记录；重试前先按记录里的状态给每个失败分类 |
+| **6 · 合成与检查** | 视频片段 + 剧本 | 带字幕的成片 | 时长靠实测不靠假设；按镜头类型处理响度；字幕由流程自己叠，不用模型烧的；跨时间点抽帧检查；语言对不对留给人耳判定 |
+| **7 · 记录** | 以上全部 | 制作记录 | 还没验证的事项单独列一节 |
 
-The full procedure, verified capability notes, validation checklist, regression tests and failure modes are in [`SKILL.md`](SKILL.md).
+完整的操作步骤、已验证的能力说明、校验清单、回归测试与故障模式见 [`SKILL.md`](SKILL.md)（英文，为最新权威版本）。
 
-## What some of the stages look like
+## 其中几步长什么样
 
-These come from a 20-shot episode made later with the same workflow.
+以下图片来自之后用同一套流程做的一集 20 个镜头的片子。
 
-**Character cards and stress test (stage 2.5).** Two characters share one design, so each is given two independent marks — hair length and the pattern inside the body — and both have to hold in eight poses the film actually needs.
+**角色卡与压力测试（第 2.5 步）。** 两个角色用的是同一套造型，所以给每个角色两处互相独立的区分标志——头发长短、身体里的花纹——并且要在片子实际需要的 8 个姿态里都立得住。
 
-![Character cards on neutral grey: front, back and face for two characters](docs/images/character-cards.jpg)
+![中性灰底的角色卡：两个角色各有正面、背面、面部特写](docs/images/character-cards.jpg)
 
-![Stress test: one character in eight poses](docs/images/stress-test.jpg)
+![压力测试：同一角色的 8 个姿态](docs/images/stress-test.jpg)
 
-**Blocking plan (stage 1.5).** Green dots are actors, blue wedges are camera fields of view. Each shot cites a camera, and its cast is whoever falls inside that wedge.
+**调度俯视图（第 1.5 步）。** 绿点是演员，蓝色扇形是摄影机的视野。每个镜头引用一台摄影机，落在扇形里的人就是这一镜的出场名单。
 
-![Top-down blocking plan](docs/images/blocking-plan.svg)
+![调度俯视图](docs/images/blocking-plan.svg)
 
-**Keyframes (stage 3).** Each image shows the state at t = 0, before the shot's action.
+**关键帧（第 3 步）。** 每张图画的是镜头动作开始之前、t = 0 时的状态。
 
-![Six keyframes from the episode](docs/images/keyframes-sheet.jpg)
+![这一集的 6 张关键帧](docs/images/keyframes-sheet.jpg)
 
-**Checking a no-dialogue shot (stage 6).** Frames taken at the loudest audio moments. With an English prompt the character kept speaking (left); rewritten in Chinese with the sound spelled out and the voice slot set to "no dialogue", the mouth stayed closed throughout (right). A human then confirmed by ear that the shot was silent.
+**检查一个无台词镜头（第 6 步）。** 在音频最响的几个时刻截帧。用英文提示词时角色一直在开口（左）；改用中文、把声音逐项写清楚、人声一项写「无台词」之后，嘴从头到尾都闭着（右）。之后再由人耳确认这一镜确实没有人声。
 
 <p>
-  <img src="docs/images/silent-shot-english-mouth-open.jpg" width="49%" alt="English prompt: the mouth opens at several moments">
-  <img src="docs/images/silent-shot-chinese-mouth-closed.jpg" width="49%" alt="Chinese prompt with a structured sound section: the mouth stays closed">
+  <img src="docs/images/silent-shot-english-mouth-open.jpg" width="49%" alt="英文提示词：多个时刻嘴是张开的">
+  <img src="docs/images/silent-shot-chinese-mouth-closed.jpg" width="49%" alt="中文提示词加结构化声音描述：嘴始终闭着">
 </p>
 
-## Example: *One Leaf over Kunlun* (15 s, three shots)
+## 示例：《糖宝出世》（15 秒，三个镜头，中文对白）
 
 ```
-examples/kunlun-one-leaf/
-├── README.md             what the example is and how it was made
-├── shots.json            the three shot prompts as submitted
-├── keyframes/            shot-01.png … shot-03.png — the approved t = 0 images
-├── kunlun-one-leaf.mp4   the finished 15-second cut (1280×720, H.264 + AAC)
-└── preview.gif           small preview for this page
+examples/tangbao-hatches/
+├── README.md            这个示例是什么、怎么做出来的
+├── shots.json           实际提交的三条镜头提示词与台词
+├── keyframes/           shot-01.png … shot-03.png —— 已批准的 t = 0 关键帧
+├── tangbao-hatches.mp4  15 秒成片（1280×720，H.264 + AAC）
+└── preview.gif          本页用的小预览
 ```
 
-| Shot | Length | Picture and motion | Sound |
-|---|---|---|---|
-| 01 · One leaf rises | 5 s | Two spirit insects ride a green leaf up beside a waterfall; the camera follows and pulls back gently through mist and morning light | Waterfall, breeze; no dialogue |
-| 02 · A shadow in the clouds | 5 s | A great bird closes in; the leaf banks left through a gap in the cloud and the insects duck down | Rising wind, a distant cry; no dialogue |
-| 03 · First sight of the jade pool | 5 s | The leaf settles by a peach branch, revealing the five-coloured pool and the peach grove as a red bird flies off | Wind drops, birdsong; no dialogue |
+| 镜头 | 时长 | 画面 | 台词（原创） | 说话人 |
+|---|---|---|---|---|
+| 01 · 破壳 | 5 秒 | 夜里石台上，少女俯身看着一枚发光、正在裂开的蛋，一位年轻男子在她身后看着 | 「动了……它真的动了！」 | 少女，屏着气 |
+| 02 · 睁眼 | 5 秒 | 一只发光的小虫破壳而出、睁开眼睛，两个人在它身后虚化 | 「爸爸……妈妈……」 | 小虫，童声 |
+| 03 · 傻眼 | 5 秒 | 从小虫身后的低角度看：少女愣住，年轻男子开始忍不住笑 | 「我什么时候当妈了？」／「你孵的，可不就是你。」 | 少女／年轻男子 |
 
-How it passed through the stages: a scene was chosen and a three-shot storyboard approved (1); the prompts were written and approved (2); three keyframes were generated and reviewed (3); they were hosted on a temporary preview channel that expired after 24 hours (4); one `agnes-video-2.5-flash` task was submitted per shot in keyframe mode at 720p (5); the clips were normalized and joined (6).
+**这一轮证实了什么。** `agnes-video-2.5-flash` 能直接根据一张关键帧和一条写着台词的提示词，生成听得懂的中文对白，而且口型对得上——不需要另外的文字转语音。三句台词是否都是中文、是否和剧本一致，由人收听后确认；没有拿任何自动分析来代替这个判定。
 
-This was the **first** run of the workflow. It predates most of what `SKILL.md` now contains — blocking, character cards, the prompt-language rules, failure classification — which were added as later and larger runs broke in new ways. It is here to show the shape of the pipeline end to end, not every rule in it.
+它走过各个阶段的方式：选定这场戏和三句原创台词并批准（第 1 步）；图片提示词批准（第 2 步）；第一版关键帧被退回——小虫的脸有点诡异，而且 03 的构图跟 01 雷同——重出时锁定可爱的虫体设定，03 改成低角度的虫视角（第 3 步）；已批准的关键帧托管到临时预览频道（第 4 步）；每个镜头提交一个 `agnes-video-2.5-flash` 任务，首帧模式、720p（第 5 步）；片段归一化后拼接（第 6 步）。四道审批关本身就是在这一轮定下来的。
 
-## Repository layout
+这是这套流程的**第二**轮。它早于调度、角色卡、提示词语言规则，以及「每个镜头都配字幕」这条规矩——这条成片没有字幕。放在这里是为了展示整条流水线和中文语音的效果，而不是 `SKILL.md` 里现在的每一条规则。
+
+## 仓库结构
 
 ```
-SKILL.md          the skill (authoritative, English)
-SKILL.zh.md       an earlier Chinese edition — not yet brought up to date with SKILL.md
-README*.md        this page in English, Simplified and Traditional Chinese
-examples/         the sample above
-docs/images/      the illustrations on this page
+SKILL.md          skill 本体（英文，权威版本）
+SKILL.zh.md       较早的中文版 —— 尚未与 SKILL.md 同步
+README*.md        本页：简体中文（默认）、英文、繁体中文
+examples/         上面的示例
+docs/images/      本页的插图
 LICENSE
 ```
 
-## Install
+## 安装
 
-Copy the skill into your agent's skills directory, for example:
+把 skill 复制到你的 Agent 的 skills 目录，例如：
 
 ```sh
 mkdir -p ~/.claude/skills/keyframe-video-production
 cp SKILL.md ~/.claude/skills/keyframe-video-production/
 ```
 
-Then ask your agent for a short video from a scene, and it should pick the skill up.
+然后让你的 Agent 根据一场戏做一段短视频，它就会用上这个 skill。
 
-## About the sample media
+## 关于示例素材
 
-- Everything in `examples/` and `docs/images/` is AI-generated. Keyframes and cards come from an image model; the keyframe PNGs still carry that generator's C2PA provenance manifest. Motion and audio come from `agnes-video-2.5-flash`.
-- The scenes are inspired by the Chinese web novel *Hua Qiangu* (《花千骨》) by Fresh果果. No text from the novel is used; the dialogue, titles and visual designs were written for these runs. The characters belong to their author; the media are shared only to illustrate the workflow, not for commercial use.
+- `examples/` 和 `docs/images/` 里的所有素材都是 AI 生成的。关键帧和角色卡来自图像模型，关键帧 PNG 里仍保留该生成器的 C2PA 溯源信息；运动和声音来自 `agnes-video-2.5-flash`。
+- 画面灵感来自 Fresh果果 的网络小说《花千骨》。没有使用小说中的任何文字；台词、标题和视觉设计都是为这些项目原创的。角色版权归原作者所有；这些素材仅用于说明工作流程，不作商业用途。
 
-## Provenance
+## 来源
 
-Distilled from real production runs between September 8 and 11, 2026: two short technical demos, a 17-shot children's idiom film, and two episodes (18 and 20 shots) adapted from a novel. Each rule in `SKILL.md` records the run that paid for it. Verdicts on spoken language come from a human listening, never from automated analysis.
+提炼自 2026 年 9 月 8 日至 11 日的真实制作：两个简短的技术演示、一部 17 个镜头的儿童成语片，以及改编自小说的两集（18 个和 20 个镜头）。`SKILL.md` 里的每一条规则都记录了是哪一次制作为它付出了代价。关于说话语言的判定一律来自人耳收听，从不来自自动分析。
 
-## License
+## 许可
 
-MIT for the skill and documentation — see [LICENSE](LICENSE). The sample media are provided for illustration; see the note above.
+skill 与文档采用 MIT 许可，见 [LICENSE](LICENSE)。示例素材仅供说明，见上文。
