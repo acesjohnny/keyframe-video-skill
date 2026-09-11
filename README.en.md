@@ -8,10 +8,9 @@ An [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) 
 
 The workflow applies to any keyframe-driven video model. It was written and verified against the Agnes video API (`agnes-video-2.5-flash`).
 
-<p align="center">
-  <a href="examples/tangbao-hatches/tangbao-hatches.mp4"><img src="examples/tangbao-hatches/preview.gif" width="480" alt="Three-shot sample: a glowing egg cracks at night, a small grub hatches and opens its eyes, the girl is stunned"></a><br>
-  <sub>A 15-second, three-shot sample with spoken Mandarin, made with this workflow. Click for the MP4.</sub>
-</p>
+https://github.com/user-attachments/assets/033e52ba-caad-4a17-a287-36918fba43c4
+
+<p align="center"><sub>A 15-second, three-shot sample with spoken Mandarin, made with this workflow. Source file: <a href="examples/tangbao-hatches/tangbao-hatches.mp4">tangbao-hatches.mp4</a></sub></p>
 
 ## What it is actually for
 
@@ -113,8 +112,7 @@ examples/tangbao-hatches/
 ├── README.md            what the example is and how it was made
 ├── shots.json           the three shot prompts and lines as submitted
 ├── keyframes/           shot-01.png … shot-03.png — the approved t = 0 images
-├── tangbao-hatches.mp4  the finished 15-second cut (1280×720, H.264 + AAC)
-└── preview.gif          small preview for this page
+└── tangbao-hatches.mp4  the finished 15-second cut (1280×720, H.264 + AAC)
 ```
 
 | Shot | Length | Picture | Line (Mandarin, original) | Speaker |

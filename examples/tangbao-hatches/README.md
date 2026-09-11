@@ -6,8 +6,7 @@ A 15-second, three-shot sample with spoken Mandarin: the second run of the keyfr
 |---|---|
 | `shots.json` | The three prompts and their original lines exactly as submitted |
 | `keyframes/shot-01.png` … `shot-03.png` | The approved t = 0 images — each clip starts from its keyframe |
-| `tangbao-hatches.mp4` | The finished cut: 15.0 s, 1280×720, H.264 + AAC; no subtitles |
-| `preview.gif` | A small preview for the README |
+| `tangbao-hatches.mp4` | The finished cut: 15.0 s, 1280×720, H.264 + AAC; no subtitles. The README's inline player plays the same file |
 
 **Pipeline.** Scene and lines approved → image prompts approved → keyframes generated, the first set rejected and redone → keyframes hosted on a temporary preview channel → one `agnes-video-2.5-flash` task per shot (`mode: keyframe`, `720P`, `16:9`, 5 s) → clips normalized to one frame rate and pixel format, loudness-normalized, and concatenated with ffmpeg.
 

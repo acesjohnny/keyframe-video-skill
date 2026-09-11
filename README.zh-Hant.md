@@ -8,10 +8,9 @@
 
 適用於任何以關鍵影格驅動的影片模型；以 Agnes 影片 API（`agnes-video-2.5-flash`）撰寫並驗證。
 
-<p align="center">
-  <a href="examples/tangbao-hatches/tangbao-hatches.mp4"><img src="examples/tangbao-hatches/preview.gif" width="480" alt="三鏡頭範例：夜裡一枚發光的蛋裂開，小蟲破殼睜眼，少女愣住"></a><br>
-  <sub>用這套流程製作的 15 秒三鏡頭範例，附普通話對白，點擊觀看 MP4。</sub>
-</p>
+https://github.com/user-attachments/assets/033e52ba-caad-4a17-a287-36918fba43c4
+
+<p align="center"><sub>用這套流程製作的 15 秒三鏡頭範例，附普通話對白。原始檔案：<a href="examples/tangbao-hatches/tangbao-hatches.mp4">tangbao-hatches.mp4</a></sub></p>
 
 ## 它真正要解決的問題
 
@@ -113,8 +112,7 @@ examples/tangbao-hatches/
 ├── README.md            這個範例是什麼、怎麼做出來的
 ├── shots.json           實際送出的三條鏡頭提示詞與台詞
 ├── keyframes/           shot-01.png … shot-03.png —— 已核准的 t = 0 關鍵影格
-├── tangbao-hatches.mp4  15 秒成片（1280×720，H.264 + AAC）
-└── preview.gif          本頁用的小預覽
+└── tangbao-hatches.mp4  15 秒成片（1280×720，H.264 + AAC）
 ```
 
 | 鏡頭 | 時長 | 畫面 | 台詞（原創） | 說話者 |

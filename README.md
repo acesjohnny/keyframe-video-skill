@@ -112,8 +112,7 @@ examples/tangbao-hatches/
 ├── README.md            这个示例是什么、怎么做出来的
 ├── shots.json           实际提交的三条镜头提示词与台词
 ├── keyframes/           shot-01.png … shot-03.png —— 已批准的 t = 0 关键帧
-├── tangbao-hatches.mp4  15 秒成片（1280×720，H.264 + AAC）
-└── preview.gif          本页用的小预览
+└── tangbao-hatches.mp4  15 秒成片（1280×720，H.264 + AAC）
 ```
 
 | 镜头 | 时长 | 画面 | 台词（原创） | 说话人 |
