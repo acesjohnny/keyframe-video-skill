@@ -8,10 +8,9 @@
 
 适用于任何关键帧驱动的视频模型；基于 Agnes 视频 API（`agnes-video-2.5-flash`）编写并验证。
 
-<p align="center">
-  <a href="examples/tangbao-hatches/tangbao-hatches.mp4"><img src="examples/tangbao-hatches/preview.gif" width="480" alt="三镜头样片：夜里一枚发光的蛋裂开，小虫破壳睁眼，少女愣住"></a><br>
-  <sub>用这套流程做的 15 秒三镜头样片，带中文对白，点击查看 MP4。</sub>
-</p>
+https://github.com/user-attachments/assets/033e52ba-caad-4a17-a287-36918fba43c4
+
+<p align="center"><sub>用这套流程做的 15 秒三镜头样片，带中文对白。原文件：<a href="examples/tangbao-hatches/tangbao-hatches.mp4">tangbao-hatches.mp4</a></sub></p>
 
 ## 它真正解决的问题
 
