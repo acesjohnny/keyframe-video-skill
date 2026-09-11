@@ -49,12 +49,37 @@ flowchart LR
 | **2 · 提示词** | 资产块（画风、场景、角色、声音） | 每镜一条拼装好的提示词，外加中英对照审阅表 | 块由脚本拼装；台词单独成段；每条负面约束都对应本镜自己做过的决定；无台词镜头要把声音写出来 |
 | **2.5 · 角色卡** | 角色圣经 | 中性灰底的正面、背面、面部特写卡，以及压力测试 | 及格线在看图**之前**定；不及格返工卡，不返工镜头 |
 | **3 · 关键帧** | 提示词 + 角色卡 | 每镜一张 t = 0 的图 | Agent 先自己看；问题和优点一样直说 |
-| **4 · 托管** | 已批准的关键帧 | 临时公开网址 | 单独审批；上传目录先扫描；每个网址重新下载比对哈希；生产环境不动 |
+| **4 · 托管** | 已批准的关键帧 | 视频接口能取到的网址——如果走法不需要托管，这一步可以跳过（见下文） | 单独审批；上传目录先扫描；每个网址重新下载比对哈希；生产环境不动 |
 | **5 · 视频任务** | 已托管的关键帧 + 提示词 | 每镜一段视频 | 提交前先写任务记录；重试前先按记录里的状态给每个失败分类 |
 | **6 · 合成与检查** | 视频片段 + 剧本 | 带字幕的成片 | 时长靠实测不靠假设；按镜头类型处理响度；字幕由流程自己叠，不用模型烧的；跨时间点抽帧检查；语言对不对留给人耳判定 |
 | **7 · 记录** | 以上全部 | 制作记录 | 还没验证的事项单独列一节 |
 
 完整的操作步骤、已验证的能力说明、校验清单、回归测试与故障模式见 [`SKILL.md`](SKILL.md)（英文，为最新权威版本）。
+
+## 适用的 Agent 与模型
+
+**任何 Agent 都能用。** 这个 skill 本身就是 Markdown 文档加一套约定。只要 Agent 能读文件、跑命令行、发 HTTP 请求，就能照着做——[Claude Code](https://code.claude.com/docs/en/overview)、[Codex](https://github.com/openai/codex)、[Hermes Agent](https://github.com/NousResearch/hermes-agent)，或者你自己的 Agent 都可以。
+
+**视频模型：用 [`agnes-video-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-video-25-flash) 验证。** 本仓库里的每一条规则都是在它上面实测出来的，用的是首帧（keyframe）模式、720p。注册和创建 API Key：**[platform.agnes-ai.com](https://platform.agnes-ai.com)**。按 2026 年 9 月 11 日查看的[官方价目页](https://wiki.agnes-ai.com/en/docs/pricing)，`agnes-video-2.5-flash` **目前限时免费**（原价 720p 视频每秒 $0.025）；不带「Flash」的 `agnes-video-2.5` 是收费的。优惠会结束，用之前请再看一眼价目页。
+
+**出图模型：随你选。** 关键帧和角色卡用过 OpenAI 的图像模型，也用过 [`agnes-image-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-image-25-flash)（同一价目页上也是 $0）。其他支持首帧的出图、视频模型，比如 MiniMax 的，也能套用同样的审批关；本仓库没有实测过它们，各家的限制请自行确认。
+
+## 关键帧怎么交给视频模型
+
+首帧模式下，视频接口要自己去取每一张图。Agnes 只收公网网址，而且要一直有效到任务完成。怎么满足这一点，决定了第 4 步「托管」要不要做：
+
+| 走法 | 需要托管吗 | 状态 |
+|---|---|---|
+| **Agnes 出图 → Agnes 视频**：`agnes-image-2.5-flash` 直接返回一个图片网址，把这个网址原样交给 `agnes-video-2.5-flash` | 不需要 | ✅ 2026-09-11 实测通过 |
+| **直接传图片数据**：[MiniMax 的视频接口](https://platform.minimax.io/docs/api-reference/video-generation-i2v)首帧可以直接传 Base64 数据 | 不需要 | 📄 仅厂商文档 |
+| **临时静态托管**：Firebase Hosting 预览频道，或对象存储加带时效的签名链接 | 需要 | ✅ Firebase 实测；对象存储未测 |
+| **本机服务器 + 隧道**：在自己电脑上放关键帧，用 [Cloudflare 临时隧道](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/)暴露成公网网址，不用注册 | 需要 | ✅ 2026-09-11 实测通过 |
+
+2026 年 9 月 11 日两次测试的结论：
+
+- **Agnes 出图 → Agnes 视频，完全不用托管就跑通了。** 图片网址不带过期参数，视频做完之后仍能打开；但 Agnes 会保留多久，文档里没写——拿到网址就立刻下载一份存档。
+- **光有本机服务器不够。** Agnes 的服务器看不到你电脑的 `localhost` 或局域网地址，家庭宽带大多也没有公网 IP，所以要用隧道给它一个公网网址。Agnes 在提交任务约 15 秒后来取了一次图。
+- **在你自己的网络里先试一遍。** 第一次测隧道时看起来像是隧道坏了，其实是本机 DNS 解析不出这个刚建的新域名；改用公共 DNS 解析就正常了。尤其是中国大陆的用户，Firebase 和部分公共 DNS 可能访问不了——「全用 Agnes」或「本机服务器 + 隧道」这两条路都用不到托管服务。
 
 ## 其中几步长什么样
 

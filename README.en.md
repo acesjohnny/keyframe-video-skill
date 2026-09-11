@@ -49,12 +49,37 @@ Highlighted stages are **gates**: the agent stops and waits for a human before g
 | **2 · Prompts** | Asset blocks (style, scene, characters, voices) | One assembled prompt per shot, plus a bilingual review table | Blocks assembled by script; the spoken line in its own paragraph; every negative mirrors a decision this shot actually made; a no-dialogue shot gets its sound written out |
 | **2.5 · Character cards** | The bible | Front, back and face cards on neutral grey, then a stress test | Pass mark fixed **before** looking; a failing card is reworked, not the shots |
 | **3 · Keyframes** | Prompts + cards | One t = 0 image per shot | Reviewed by the agent first; failures reported as plainly as successes |
-| **4 · Hosting** | Approved keyframes | Temporary public URLs | Its own approval; upload directory scanned; every URL re-downloaded and hash-checked; production untouched |
+| **4 · Hosting** | Approved keyframes | A URL the video API can fetch — or nothing, if the route needs no hosting (see below) | Its own approval; upload directory scanned; every URL re-downloaded and hash-checked; production untouched |
 | **5 · Video tasks** | Hosted keyframes + prompts | One clip per shot | Job record written before submitting; every failure classified by its stored state before anything is retried |
 | **6 · Assembly & checks** | Clips + script | The finished cut with subtitles | Durations probed, never assumed; loudness per shot type; subtitles drawn by the pipeline, never by the model; frames checked across time; the language verdict left to a human ear |
 | **7 · Record** | Everything above | A production log | What is still unverified gets its own section |
 
 The full procedure, verified capability notes, validation checklist, regression tests and failure modes are in [`SKILL.md`](SKILL.md).
+
+## Agents and models
+
+**Any agent.** The skill is plain Markdown plus conventions. Any agent that can read files, run shell commands and make HTTP calls can follow it — [Claude Code](https://code.claude.com/docs/en/overview), [Codex](https://github.com/openai/codex), [Hermes Agent](https://github.com/NousResearch/hermes-agent), or your own.
+
+**Video model — verified with [`agnes-video-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-video-25-flash).** Every rule in this repository was measured on it, in keyframe (first-frame) mode at 720p. Sign up and create an API key at **[platform.agnes-ai.com](https://platform.agnes-ai.com)**. On the [official price page](https://wiki.agnes-ai.com/en/docs/pricing), checked on 2026-09-11, `agnes-video-2.5-flash` is **free for a limited time** (list price $0.025 per second of 720p video); `agnes-video-2.5` without "Flash" is billed. Offers end — check the page before you rely on it.
+
+**Image model — your choice.** Keyframes and character cards have come from an OpenAI image model and from [`agnes-image-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-image-25-flash) (also listed at $0 on the same page). Other keyframe-capable image and video models, MiniMax's among them, fit the same gates; this repository has not tested them, so check their limits yourself.
+
+## Getting the keyframe to the video model
+
+In keyframe mode the video API has to fetch each image, and Agnes accepts only a public URL that stays valid until the task completes. How you meet that decides whether stage 4 exists at all:
+
+| Route | Hosting needed? | Status |
+|---|---|---|
+| **Agnes image → Agnes video.** `agnes-image-2.5-flash` returns a hosted image URL; pass that same URL to `agnes-video-2.5-flash` | No | ✅ Verified 2026-09-11 |
+| **Inline image data.** [MiniMax's video API](https://platform.minimax.io/docs/api-reference/video-generation-i2v) accepts the first frame as a Base64 data URL | No | 📄 Vendor docs only |
+| **Temporary static host.** A Firebase Hosting preview channel, or an object-storage bucket with a signed, expiring URL | Yes | ✅ Firebase verified; object storage not tested |
+| **Local server + tunnel.** Serve the keyframes from your own machine and expose them with a [Cloudflare quick tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/) — no account needed | Yes | ✅ Verified 2026-09-11 |
+
+What the two tests on 2026-09-11 showed:
+
+- **Agnes image → Agnes video worked with no hosting at all.** The image URL carried no expiry parameter and still loaded after the video finished, but how long Agnes keeps it is not documented — download a copy the moment you get it.
+- **A local server on its own is not enough.** `localhost` or a LAN address is invisible to the vendor, and most home connections have no public address. The tunnel provides one. Agnes fetched the image once, about 15 seconds after the task was submitted.
+- **Test the route from your own network.** The first tunnel attempt looked dead because the local DNS would not resolve the brand-new hostname; resolving it through a public DNS server showed it was fine. For users in mainland China in particular, Firebase and some public DNS servers may be unreachable — the Agnes-only route, or the local-server-plus-tunnel route, avoids the hosting service entirely.
 
 ## What some of the stages look like
 

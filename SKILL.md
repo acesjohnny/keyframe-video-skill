@@ -13,12 +13,20 @@ The workflow applies to any keyframe-driven video model. It was written and veri
 
 Use this when:
 
-- The target is a short demo (typically 3 shots x 5s), not a finished film.
-- Shots must start from a specific image, so images need to be publicly fetchable over HTTPS.
+- The target is a multi-shot video — a short demo, an episode, or a whole adapted work — in which every shot
+  starts from a specific keyframe image.
+- The video API needs that image as a publicly fetchable HTTPS URL, or accepts it inline (see gate 4).
 - Character or scene continuity across shots matters.
 - The user wants to approve the plan before spend, not review a finished artifact.
 
-Do **not** use this for pure text-to-video with no keyframe, long-form editing, or anything published outward without a fresh confirmation.
+Do **not** use this for pure text-to-video with no keyframe, editing existing footage, or anything published outward
+without a fresh confirmation.
+
+**Any agent, any keyframe-driven model.** Nothing here depends on one agent or one vendor. The agent needs to read
+files, run shell commands and make HTTP calls — Claude Code, Codex and Hermes Agent all qualify. The video model needs
+a keyframe (first-frame) mode. It was written and verified against `agnes-video-2.5-flash`, with keyframes from an
+OpenAI image model and from `agnes-image-2.5-flash`; other image and video models (MiniMax's among them) fit the same
+gates, with their own limits to check.
 
 ## Verified Capability Notes
 
@@ -39,6 +47,9 @@ Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
   positive one the model is already reliable at ("this person is speaking, everyone else is silent").
   **Verified** on a ten-shot rebuild (2026-09-09): six timepoints sampled across every shot showed the
   storyteller lip-syncing and every character behind him mouth-shut, with no exceptions.
+- **Price, checked on the vendor's price page on 2026-09-11:** `agnes-video-2.5-flash` and the `agnes-image-*-flash`
+  models were listed at $0 as a limited-time offer, while `agnes-video-2.5` (without Flash) was billed per second.
+  Offers end; check the page again before quoting it.
 - Clips come back with real ambient audio rather than a silent track.
 - Generated speech sits quiet, around -35 dBFS mean, so plan on loudness normalization.
 - Voice casting is per-clip and has no id to pin, so one character's timbre wanders across a cut unless the
@@ -328,7 +339,34 @@ without the third, every shot inherits the model's default framing.
 
 ### 4. Hosting (gate 4)
 
-Keyframe mode needs a public HTTPS URL per image. Firebase Hosting preview channels work well for this, since they carry a native expiry. Use a **new, dedicated** channel with a short expiry rather than reusing an earlier round's — prior job records still cite those URLs, and overwriting them destroys that evidence.
+Keyframe mode needs each image where the video API can reach it. Pick the route before generating, because it
+decides whether this gate exists at all:
+
+| Route | Hosting needed? | Status |
+|---|---|---|
+| The image model returns a hosted URL (`agnes-image-2.5-flash`, `response_format: url`) and the same URL goes to `agnes-video-2.5-flash` | No | **Verified** 2026-09-11 |
+| The video API accepts the image inline as a Base64 data URL (MiniMax's first-frame parameter, per its docs) | No | Vendor documentation only |
+| A temporary static host with an expiry — a Firebase Hosting preview channel, or an object-storage bucket with a signed URL | Yes | Firebase **verified** across six rounds; object storage not tested |
+| A local HTTP server behind a tunnel (Cloudflare quick tunnel) | Yes | **Verified** 2026-09-11 |
+
+What the two verified 2026-09-11 routes taught:
+
+- **A provider's hosted URL skips this gate but not the evidence.** The Agnes image URL carried no signature or
+  expiry parameter and was still served after the video finished, but its retention is undocumented. Download a
+  copy the moment it is returned and hash it; the copy, not the URL, is the archive.
+- **A local server alone is unreachable.** `localhost` and LAN addresses mean nothing to the vendor's servers, and
+  most home connections have no public address. A tunnel supplies one. Bind the server to `127.0.0.1`, serve a
+  directory containing only the keyframes, and tear both down when the task completes.
+- **Verify reachability from outside, not through the local resolver.** The first attempt failed its own pre-check
+  because the machine's resolver would not resolve the freshly created tunnel hostname; it looked like a dead
+  tunnel. Resolve through a public DNS server, fetch through that address, compare the hash, and only then submit.
+- **The vendor fetched the image once.** The server log showed a single request about fifteen seconds after
+  submission. Keep the URL alive until the task completes anyway — that is what the vendor's documentation asks.
+- **Check that the route works where the user is.** A route that works from one network can fail from another:
+  some DNS servers, UDP, or a provider's storage domain may be unreachable. Test it from the user's network before a
+  round depends on it.
+
+For a temporary static host, Firebase Hosting preview channels work well, since they carry a native expiry. Use a **new, dedicated** channel with a short expiry rather than reusing an earlier round's — prior job records still cite those URLs, and overwriting them destroys that evidence.
 
 Before hosting, build the upload directory and scan it: API key strings, generic credential patterns, and image metadata for paths, prompt text or identity. Images from some generators embed a C2PA provenance manifest and an invisible watermark; harmless for internal tests, but disclose it, and think twice before reusing such images in public deliverables.
 
@@ -395,6 +433,7 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - Scene description in English, spoken line in its intended language, stage directions kept out of the line's
   paragraph.
 - Character bible byte-identical across all shot prompts.
+- Hosting route chosen before generating, and shown to work from the user's own network.
 - Upload directory contains only intended files; credential and metadata scans clean.
 - Every hosted image: HTTP 200, expected content type, SHA-256 equal to local.
 - Production and prior hosting targets unchanged.
