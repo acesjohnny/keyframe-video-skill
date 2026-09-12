@@ -1,0 +1,1 @@
+Temporary Agnes hosting test. Image upload is pending because the current GitHub connector does not accept local file references for binary blob creation.
