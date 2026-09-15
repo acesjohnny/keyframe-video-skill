@@ -60,6 +60,13 @@ Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
   **Verified** 2026-09-09: nine clips of one character, previously wandering in timbre, came back as one
   voice after adding the block and stripping the per-shot tone lines. The verdict was a human listening,
   not analysis — the agent cannot hear.
+- **A clip can cut inside itself.** Asked for a shot, the model sometimes returns two or three shots in one clip —
+  a reverse angle, a costume change, a stranger walking in, a different building — so a 5-second request yields
+  2 usable seconds. On one 18-clip round (2026-09-14) seven clips did it. Writing **"one single unbroken take from
+  one locked camera position; the location, angle and framing stay exactly as in the first frame from the first
+  frame to the last"** at the top of the video prompt stopped it: **verified** on the next fifteen tasks
+  (2026-09-15), zero internal cuts, including a moving point-of-view walk and a slow push-in. Detect it rather than
+  trusting it — see *The model cuts inside a clip* below.
 - An API key for the video models may carry **no speech or TTS model at all**. List the available models before
   promising anyone a TTS fallback — and list them again before assuming which *stage* the vendor can serve.
   The same key that runs the video may also carry image models, in which case reaching for an unrelated CLI
@@ -312,6 +319,21 @@ a line can say it.
 
 Keyframes should show the state at t=0, before the shot's action — the motion is what the video adds. If the image already shows the end state, that beat is gone.
 
+**A continuity reference that is too strong gets copied, not followed.** Attaching an approved keyframe so a new
+shot stays "in the same room" can hand back that keyframe almost unchanged. A point-of-view opening meant to start
+wide at the doorway, with the character small across the room, came back (2026-09-15) as the approved medium back
+view it was given for continuity — the character filling most of the frame height, leaving the camera nowhere to
+walk. When the new shot must differ in **scale or distance** from an approved frame, drop that frame from the
+references, keep the character and scene cards, and state the scale in the prompt as a proportion of frame height
+("she occupies about half of the frame height").
+
+**A reference-film still brings its set and its faces with it.** A still attached "for composition and lighting
+only" was reproduced with its whole set dressing — display stands, banners, lanterns — and a tight profile still
+came back with the reference actor's face rather than the approved character's. When replicating a reference is
+the goal, that is the fastest route to it; when it is not, it is a leak. Either way, check the result's face against
+the character card, and expect a room built from a still to break continuity with earlier shots built from the scene
+card: rebuild the scene card from the new look before continuing, rather than letting two rooms alternate.
+
 **Audit repetition with a root-structure signature, not by eye.** "Vary the framing" is advice nobody can check.
 Instead label every shot that shares a recurring setup with the same ten properties and compare the labels:
 
@@ -443,7 +465,12 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - Before/after state comparisons taken with identical commands, and each call's success asserted before its
   body was read as state.
 - Any automated detector used as evidence shown to stay quiet on known-clean input.
-- Final cut: expected duration, resolution, fps, audio stream present; peak level checked for clipping.
+- Every video prompt opens with the unbroken-take wording; every source clip scanned for internal cuts.
+- In and out points chosen per clip from its speech window or action, recorded in an edit decision file.
+- Final cut: expected duration, resolution, fps, audio stream present; peak level checked for clipping; no
+  letterbox bars; shot changes only at planned boundaries; every dialogue window transcribed and whole.
+- Loudness compared with the reference **per shot**, not only integrated; any boosted quiet recording checked for
+  band balance; the normalization mode actually used read from its summary.
 - Sampled frames reviewed by eye, across time, on the whole frame.
 - Superseded keyframes, clips and job records archived rather than overwritten.
 - Every no-dialogue shot has a written sound section (voice slot: 无台词) and was checked for open mouths at its
@@ -515,6 +542,24 @@ moments checked for open mouths before anyone listens.
 *Fail:* accepting the signature comparison's "no duplicates".
 *Pass:* changing scale, subject count or camera side on at least one of them.
 
+**T16 — Trim by content, not from zero.** A 4.5-second dialogue clip goes into a 3-second slot.
+*Fail:* `-t 3` from the first frame, then trusting the probe.
+*Pass:* locating the speech window, cutting around it, and transcribing that window of the finished master.
+
+**T17 — A continuity reference can override the shot.** A new wide opening must happen in an approved room.
+*Fail:* attaching the approved close back view "for continuity" and accepting a near-copy of it.
+*Pass:* keeping the scene card, dropping the frame whose scale conflicts, and stating the scale as a share of frame
+height.
+
+**T18 — Loud enough overall is not matched.** The master reads -14.4 LUFS; the reference's opening is 10 dB louder.
+*Fail:* reporting the integrated figure, or boosting the clip ambience by the difference and trusting the arithmetic.
+*Pass:* comparing per shot, muting layers to find the one that owns the level, and measuring each rebuilt mix.
+
+**T19 — Loudness matched, tone not.** After a large boost the opening matches on loudness but sounds hissy.
+*Fail:* calling it done because the loudness table is green, or low-passing every shot hard.
+*Pass:* comparing band balance against the reference, low-passing the hissy shots, keeping a higher cutoff where a
+transient sound lives in the top end, and confirming loudness did not move.
+
 ## Failure Modes
 
 ### Task completes but nothing downloads
@@ -544,6 +589,12 @@ the process stays alive at near-zero CPU and the batch never advances, which rea
 hang. Drive such tools from a script that gives each call an explicit timeout and one retry, passes
 `stdin=DEVNULL` deliberately, and writes each call's output to its own log file rather than discarding it.
 
+**A timeout does not mean nothing was produced.** The CLI writes the image before it finishes composing its reply,
+so the timeout can fire after the file has landed. A driver that treats every timeout as failure then retries and
+overwrites a good image with a second attempt (2026-09-15, caught only because the file's timestamp predated the
+timeout). After a timeout, check whether the output exists at a plausible size and keep it if it does; retry only
+when it does not. And never let a retry overwrite an existing output — write each attempt to its own name or skip.
+
 ### Burned-in subtitles
 
 Models add captions when dialogue is requested, and they arrive on some shots and not others. Whichever way the
@@ -569,6 +620,31 @@ assertion, the fade-out start, the review-frame offsets. The next round with mix
 truncates every longer clip — a 10-second narration loses its second half — and still produces a plausible file.
 Derive every duration-dependent value from that clip's own probed length before a round with variable shots.
 
+### Trimming every clip from its first frame
+
+Generation length is whole seconds and the edit wants 3.5 or 6.5, so the obvious assembly trims each clip to its
+edit length from frame zero. It silently cuts dialogue: a model that starts speaking at 2.56 seconds into a 4.5-second
+clip loses its whole line to a 3-second trim, and the master ships with one word of it (2026-09-14). Nothing flags
+it — the file probes clean, and a pre-production TTS timing gate says nothing about when the *video model* chooses
+to speak.
+
+**Choose each clip's in and out points from its content.** For a dialogue clip, find the speech window (a silence
+detector gives the bursts; word timestamps from a local speech recognizer give the order), start a beat before it and
+end a beat after it. For an action clip, look at frames across time and keep the stretch where the action reads and
+no internal cut intrudes. Record the chosen points per shot in an edit decision file with a one-line reason, so a
+re-edit is a data change. Let dialogue audio lead or trail the picture (J- and L-cuts) when the picture must cut
+before the line ends. Then verify the master, not the clips: transcribe each dialogue window of the finished cut and
+check the line is whole, and burn subtitles from the script, timed to the measured speech.
+
+### The model cuts inside a clip
+
+A shot-change detector (`select='gt(scene,0.25)'` over a downscaled copy) run on each **source clip** finds the cuts
+the model added; run it on the **master** and every hit should land on a planned shot boundary, so anything else is
+an intrusion. On the clips that had internal cuts, the segments after the cut carried the continuity damage — changed
+costume, an extra person, another location — so the usable part was almost always before the first cut. Trim to it,
+and regenerate the shot with the unbroken-take wording if what remains is too short. A dark night scene can hide real
+cuts from the detector at that threshold; lower it for dark footage and confirm by eye.
+
 ### Dialogue too quiet in the master
 
 Generated speech can sit near -35 dBFS. Loudness normalization in the per-clip pass brings it up. Check the final peak level afterwards, since a concat re-encode can push peaks to full scale and clip.
@@ -580,6 +656,40 @@ to a wind-only or water-only beat it makes ambience as loud as speech; applied t
 bed was lifted from a quiet window (peak near -73 dBFS) it lifts the noise floor by fifty-odd dB and delivers
 hiss. Drive the choice from the shot's own script entry: `loudnorm` where there is a line, a gentle limited
 gain where there is not.
+
+### Matching a reference's loudness shot by shot
+
+A master can hit its integrated target and still be wrong where it matters. A cut at -14.4 LUFS, close to its
+reference overall, had an opening 10 dB quieter than the reference's for three shots running (2026-09-15). Only
+a **per-shot** comparison shows it: momentary loudness binned at 0.25 s, averaged per shot **in energy, not in
+decibels**, set against the same shot's window in the reference.
+
+Four things decide whether a fix lands:
+
+- **Find which layer owns the level before boosting anything.** Mute one bus at a time, rebuild the mix and
+  measure. In that opening a synthesized wind bed sat about 6 dB above the clips' own ambience, so lifting the
+  ambience by 8 dB moved the shots by about 1 dB. Lift the owner, or both.
+- **Measure the rebuilt mix; do not compute the gain.** `loudnorm` with `linear=true` silently falls back to
+  dynamic mode when the linear gain would break the true-peak ceiling — it did on every build of that cut — and
+  dynamic mode lifts quiet passages non-linearly. The opening came up 12 dB for an 8–12 dB boost, and a further
+  2 dB changed nothing. Read `Normalization Type` in the summary, and iterate with an audio-only rebuild that
+  takes seconds instead of a full render.
+- **A boosted quiet recording brings its hiss.** Ambience recorded low and raised 18 dB matched on loudness and
+  came out bright: energy above 5 kHz stood 12.7 dB under the mid band against 20.7 dB in the reference. A
+  per-shot low-pass fixed most of it without moving loudness (to 18.1 dB). Set the cutoff by content: 2 kHz on
+  hiss-only room tone, 4 kHz where a transient such as porcelain clinking lives in the top end.
+- **Prove a mixing refactor is sound-neutral by comparison, not by checksum.** Noise generators without a seed
+  make every build differ. Build twice with the new code; if run-to-run difference equals old-to-new difference
+  (here -31.3 dB against -31.2 dB), the change is neutral. Better still, seed every noise generator (`anoisesrc=…:seed=N`) so a rebuild
+  of the same edit is bit-identical and a checksum becomes enough.
+- **Choose the normalization mode on purpose.** Plain gain plus a peak limiter makes a +N dB change in the mix
+  +N dB in the master; `loudnorm`'s dynamic fallback does not. Switching an existing cut between them moves its
+  quiet passages — the same settings came out 3–6 dB quieter in the opening under linear gain — so keep old
+  versions on the mode they were tuned with and record the mode actually used after each render.
+
+Keep mix settings (bus and item gain, mutes, ducking, target) as data in each cut version and save every change
+as a new version. A browser preview of the mix is an approximation — it cannot reproduce sidechain ducking or
+the final normalization — so check the rendered master against the reference before calling it done.
 
 ### Extra or missing utterances, and voices that collide
 
@@ -634,6 +744,16 @@ the model's motion for that shot**. Rebuild it locally as a slow push-in or pan 
 (`zoompan` over an upscaled still), which is exactly what a landscape beat wants anyway, costs no billable
 task, and yields precisely the frame that was approved. Take the ambience from the discarded clip's quietest
 window rather than its full track, which contains the invented presenter's voice.
+
+### A local push-in that sticks to the top-left corner
+
+Building a push-in locally by scaling up frame by frame and cropping a fixed 1280×720 window, with the crop offset
+written as a fraction of `in_w - 1280`, looks correct and is not: FFmpeg's `crop` takes `in_w`/`in_h` from the first
+frame, so as the scaled frame grows the offset stays near zero and every push drifts toward the top-left corner. Two
+test renders with different horizontal centres came out identical (2026-09-15), which is the tell. Compute the
+overflow from the zoom expression itself — the same expression the scale uses — and multiply that by the centre
+fraction. While scaling to cover, also cover the frame rather than padding it: a 1280×704 source padded to 720 ships
+with 8-pixel black bars top and bottom.
 
 ### A no-dialogue shot invents its own line
 
