@@ -78,6 +78,20 @@ Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
 
 Treat all of this as a dated observation about one vendor, not a guarantee. Re-check before relying on it.
 
+**A second image vendor is not a drop-in.** Swapping the keyframe generator to MiniMax `image-01` (2026-09-16,
+one paid image) surfaced three limits in one attempt, all of which apply to any vendor swap:
+
+- **Keys are regional.** The same key is valid on `api.minimaxi.com` and rejected on `api.minimax.io`. Probe with a
+  request that cannot produce output — send an invalid parameter and read the error — rather than burning a real
+  generation to find out which host a key belongs to.
+- **Prompt length is a hard cap, and truncation is silent.** 1500 characters against a 4136-character keyframe
+  prompt; the harness cut it and generated anyway. Keep a short variant per task when a model has a cap, and warn
+  in the plan when no short variant exists.
+- **One reference image, not a set.** Our keyframes ride on a character card plus a scene card plus a prop card;
+  `subject_reference` takes a single image. The result matched neither the approved face nor the scene, and the
+  pearl in the prompt never appeared. Character consistency across shots is exactly what the extra references buy,
+  so a one-reference vendor is for standalone images, not for a continuity-bound film.
+
 ## Hard Rules
 
 1. **Every gate is a stop.** Script/dialogue/storyboard, then blocking, then image prompts, then character
@@ -259,6 +273,28 @@ For a lip-sync test, require in every prompt that faces are fully visible and mo
 
 Show the prompts for approval before generating.
 
+### 2.4. Previs a camera move before generating it (reported, not measured here)
+
+A walkthrough of an agent driving Blender through an MCP connector (watched 2026-09-16) makes the case for blocking a
+**camera route** in 3D before any generation, for shots whose geometry is the hard part: a 10 cm protagonist running
+across a carpet, sucked up a vacuum tube, the camera pulling back to reveal the product, all in one unbroken take. The
+route is checked and fixed in the grey-box stage — where a turn is awkward, when the product appears — and only then
+does the previs render plus character and product sheets go to a video model. Three details worth copying:
+
+- **Deliberately crude figures.** Boxes and spheres; dancers were plain blocks. The stage answers where people stand,
+  which way they face, when the camera passes them — nothing else. But keep the action relationships that the shot
+  actually needs: a handshake, climbing an obstacle, a hand reaching a specific object.
+- **Colour-code facing.** Green face = front, red face = back, so a camera swinging around the group tells you whether
+  it lands on faces or backs.
+- **Say what each reference governs, and what must not be inherited.** Previs video: camera path, positions, timing.
+  Character sheet: face and wardrobe. Scene image: environment and style. Prompt: action, performance, sound. Then
+  state explicitly that the grey mannequins, the blocking colours, the sheet's studio background and its neutral
+  standing pose are **not** to appear in the film. This is the same failure as *A continuity reference that is too
+  strong gets copied* above, handled by division of labour instead of by dropping the reference.
+
+Unverified here: this workflow needs a video model that accepts a **video** reference (the previs) rather than only a
+first frame, so it does not apply to a keyframe-only route without checking what the model takes.
+
 ### 2.5. Build character cards before shot keyframes
 
 A character's identity reference should be a **card, not a frame from the film**. Generate it on a neutral grey
@@ -439,6 +475,143 @@ Assemble with a normalization pass (uniform scale, fps, pixel format; silent tra
 
 Write down what was produced and, in its own section, record what remains **unverified** — language verdict, billing, any anomaly — rather than burying it in prose. When the user later gives a verdict, write it back and say who judged it.
 
+## Driving this from a local control surface
+
+The workflow above was built as a chat-driven sequence, then wrapped in a local web canvas so a non-programmer can
+run it. What the wrapping taught, in the order it bites:
+
+- **The files are the product; the page is a view.** Every piece of state already on disk — one task yaml per asset
+  *version*, one folder per generation round, one edit list per cut — stays the source of truth. The page reads and
+  writes those files and owns nothing itself, so the same project is equally workable from a terminal, from an
+  agent, or from the page, and a half-finished session leaves no state trapped in a browser.
+- **Plan, confirm, run — with the plan spelled out.** Every provider call goes through a written plan the human
+  confirms: how many calls, how many seconds, what it costs, what becomes public, and what will be skipped because
+  it already exists. Re-validate at confirm time and refuse if the underlying files changed since the plan was
+  drawn; a plan is a claim about the world, and the world moves.
+- **Persist the job record before the call, not after.** Restarting the service marks anything that was running
+  *interrupted* rather than lost; resuming re-plans and re-confirms. A record that already holds a provider task id
+  is polled, never resubmitted — the same guard as gate 5, now enforced by the thing that does the submitting.
+- **Bill what was produced, not what was planned.** Three failed attempts against a rejected key were recorded as
+  spend because the ledger trusted the plan (2026-09-16). Write the amount from the run's own result, once per job,
+  and let a failed run record zero.
+- **Detect credentials; never hold them.** The page checks whether a CLI is logged in, whether an environment
+  variable is set, whether a credentials file exists — and shows only that, plus the command to fix it. No key is
+  read, echoed, stored in the repo, or accepted through a form. Say plainly that an environment variable needs the
+  service restarted before it is visible.
+- **Offer only what is actually wired.** List every model a project might use, but mark which ones the tool can
+  really drive and which only record a choice, and refuse the unwired ones at plan time with that sentence. A
+  greyed button with a reason beats a run that dies halfway.
+- **Stamp ownership on generated artefacts.** An edit list produced by the generic renderer carried no mark, and
+  ownership was inferred from an "edited in" field — which the editor rewrites on every save, so an edited copy was
+  handed to the wrong renderer and crashed (2026-09-17). Write an explicit `renderer:` (or equivalent) field that
+  survives editing, and fall back to structure, never to authorship strings, for older files.
+- **Relative paths belong to where the file lands.** The first auto-generated edit list computed its clip paths
+  against the default folder while being written somewhere else, so the renderer found nothing. Compute against the
+  real destination.
+- **Cut from the speech, and hand the cut onward.** The first assembly is generated from each clip's own
+  word-timestamped speech span (see *A silence detector is not a speech window*), and the same edit list exports to
+  OpenTimelineIO and Final Cut XML so the cut can be finished in a real NLE instead of being re-matched by hand.
+- **Order the surface the way the pipeline depends.** Cards before keyframes, keyframes approved before video,
+  video before the cut. Show, per shot, exactly which referenced card is still unapproved and make that line the
+  button that fixes it; offer a default reference-sheet template per asset kind (multi-angle character turnaround,
+  same-light scene pair, three-view prop) so a first card is one click rather than a blank prompt box.
+
+## Lessons from a narrated teaching series (2026-09-16/17)
+
+A three-episode classroom series — one recurring on-camera teacher, a flat watercolour picture-book look, Mandarin
+narration, burned-in subtitles — was produced end to end through the canvas: 3 episodes, 44 model tasks across
+11 rounds, 7 shots reused from an existing slide deck. What it added to this document:
+
+### The keyframe's style does not carry into the video
+
+Every keyframe prompt asked for flat watercolour, and every keyframe came out flat watercolour. The **video** prompts
+said nothing about style, and the clips drifted: skin gained shading and highlights, painted backdrops turned glossy,
+and on two shots the model cut away after one or two frames into a **photographic** version of the same room. A
+reviewer caught the milder drift by eye on a finished cut; per-second contact sheets (keyframe, 1 s, 4 s, 7 s) made it
+unmistakable. Adding one sentence to the video prompt, straight after the unbroken-take line, fixed it:
+
+> The whole clip stays a flat watercolour children's-book illustration exactly like the first frame — soft paper
+> texture and painted colours; it never turns into a photograph or live-action footage.
+
+**Verified** on 14 teacher shots across three episodes (2026-09-17): every regenerated clip held the look, including
+the ones that had turned photographic. Treat the style lock as a standing block, byte-identical in every video prompt
+of a stylised film, exactly like the character bible — the image prompt's style clause does not transfer.
+
+### Lines the model mispronounces, and when to stop re-rolling
+
+A human listened to every dialogue clip. Three failure shapes recurred, each on more than one attempt:
+
+| Line feature | What happened | Fix that held |
+|---|---|---|
+| Reduplication (「很久很久以前」) | a syllable swallowed, **twice in a row** on the same line | rephrase without the repeat (「好久以前的時代」) |
+| Question word at the very end (「……甚麼？」) | sounded foreign-accented, **three rounds running** — a stronger voice block helped the rest of the line but not the last word | rephrase the question so it does not end on that word (「人和狗是怎樣互相幫忙的？」) |
+| Polyphonic character (「種子」) | read with the wrong tone | swap to an unambiguous word (「穀粒」) |
+
+After **one** repeat of the same fault, change the line rather than the dice. Screen new lines mechanically before
+gate 2: no reduplicated characters, no line-final question word, no polyphonic character where another word will do.
+A local speech recogniser helps as a tripwire (it transcribed the swallowed line as 「很久久久」 both times) but never as
+the verdict — it also turned correct lines into near-homophones (「穀粒」→「古力」, 「馴服」→「巡浮」).
+
+### A voice cannot be pinned; only its description can
+
+The video API has no voice id and keyframe mode will not take an approved recording. What can be held constant is the
+voice block, so audit it: extract the `VOICE:` paragraph from every submitted prompt across every round and compare
+hashes. The audit found three shots of the first episode still carrying the pre-fix block after the rest had moved on.
+And say plainly that **every regeneration is a new recording**: lines already approved by ear must be listened to
+again, even when the only change was a style sentence.
+
+A stronger voice block did help: naming the speaker as a native Mandarin speaker "like a primary-school Chinese
+teacher on national television … no foreign or non-native accent" removed most of an accent a listener had flagged.
+
+### Card gate and card shape
+
+- **Do not skip gate 2.5.** In this run the cards were generated and immediately used as references for shot
+  keyframes without being shown; the user caught it. Cards are approved first, then stress-tested, then used.
+- **Define every visible attribute before the card.** The bible said nothing about trousers or shoes, so the model
+  invented them; adding them after the cards left the cards out of step with the bible and forced a v2.
+- **A mark the model never draws is not an identity mark.** Dimples were in the bible; neither the card nor any of
+  eight probes showed them. Record that, keep or drop it by the user's call, and do not count it in the pass line.
+- **Colour drifts between views.** The back view came out with a pinker cardigan than the front; regenerating it with
+  the front view attached as a reference and the colour pinned in words fixed it.
+- **A canvas character is one card per version**, not one per view: merge front, back and face into a single
+  turnaround image, keep the per-view tasks aside, and approve through the canvas's own review call.
+
+### Reusing already-approved art
+
+Scene shots whose picture already existed in an approved slide deck used those slides as first frames directly —
+no new images, and the film matched the classroom material. It worked for all seven such shots. A slide drawn for a
+different purpose may carry what a film shot must not: an eighth candidate had two cartoon children and pseudo-writing on a
+tablet, so it was redrawn as an object-only still with abstract marks.
+
+### Rate limits across projects
+
+Two canvas projects submitting at once drew **HTTP 429 `rate_limit_exceeded`** ("free users") on the second one's first
+task. The body is an explicit refusal and the record held no task id, so nothing was built; the canvas nonetheless
+marked it `submission_uncertain` and stopped the batch. Archive such a record, then resubmit the same authorised
+count. Better: submit one project's batch at a time. The error text invites a paid upgrade — that is the account
+owner's decision, never the agent's.
+
+### Hosting reuse across rounds
+
+Later rounds reused the first round's preview channel instead of redeploying: before each submit, fetch every image
+anonymously again and compare hashes, write the result into the new round, and check the channel's remaining life.
+A round that must finish before a channel expires says so when asking for approval.
+
+### Post-production details that bit
+
+- **Speed variants**: speed the picture with `setpts=(PTS-STARTPTS)/k` and the sound with `atempo=k` (pitch kept),
+  scale the subtitle times by the same factor, and leave title cards, still push-ins and the closing hold at normal
+  speed. Keep each speed as its own edit-list version and master name.
+- **`alimiter` normalises by default.** Its `level` option defaults to on and lifts the whole mix to the limit;
+  pass `level=false` wherever a limiter is meant only as a ceiling, then re-measure every master.
+- **Wrap subtitles at punctuation.** A character-count wrap split 「市集」 across two lines; break after the last comma or
+  enumeration mark in the line when one exists past the first third.
+- **Traditional-Chinese checkers over-correct.** OpenCC `s2hk` rewrote 「群」 as 「羣」; keep a short allow-list of the
+  house forms a project has decided on, and fail on everything else.
+- **Never write over a versioned file.** A new edit list was saved under a tag that already existed and destroyed a
+  1.5× speed variant (not in git). It was rebuilt from its 1.25× sibling and proved identical against the rendered
+  timeline, but the rule is simpler: check the name is free and fail if it is not.
+
 ## Round Isolation
 
 A second run must not overwrite the first. Scripts that hardcode a single `output/` directory will clobber prior clips, job records and masters. Give every round its own subtree and its own shot definitions, and verify the no-argument path still behaves exactly as the first round did.
@@ -469,6 +642,9 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - In and out points chosen per clip from its speech window or action, recorded in an edit decision file.
 - Final cut: expected duration, resolution, fps, audio stream present; peak level checked for clipping; no
   letterbox bars; shot changes only at planned boundaries; every dialogue window transcribed and whole.
+- Spend recorded from what a run produced, not from its plan; failed runs recorded zero.
+- No credential value read, echoed or written into the repository — only presence checked.
+- Every generated artefact says which tool owns it, in a field that survives later edits.
 - Loudness compared with the reference **per shot**, not only integrated; any boosted quiet recording checked for
   band balance; the normalization mode actually used read from its summary.
 - Sampled frames reviewed by eye, across time, on the whole frame.
@@ -477,6 +653,12 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
   loudest moments; every shot's language verdict came from a human ear.
 - Card sets internally consistent (same garment, hair and ornaments in every view) before any stress test.
 - Unverified claims recorded as unverified.
+- Every video prompt of a stylised film carries the style-lock sentence, byte-identical; per-second contact sheets
+  compared against the keyframe.
+- The `VOICE:` block hashed across every submitted prompt of the project; any stale copy found and replaced.
+- Every regenerated dialogue clip re-listened, including lines approved in an earlier round.
+- New lines screened for reduplication, line-final question words and avoidable polyphonic characters.
+- A versioned output's name checked free before writing.
 
 ## Regression Tests
 
@@ -560,6 +742,27 @@ height.
 *Pass:* comparing band balance against the reference, low-passing the hissy shots, keeping a higher cutoff where a
 transient sound lives in the top end, and confirming loudness did not move.
 
+**T20 — The image prompt's style does not reach the video.** Keyframes are flat watercolour; the video prompt says
+nothing about style.
+*Fail:* trusting the keyframe to hold the look.
+*Pass:* a style-lock sentence in every video prompt, checked on keyframe-versus-seconds contact sheets.
+
+**T21 — Same fault twice means change the line.** A listener hears the same word mangled in two rounds.
+*Fail:* a third re-roll of the identical line.
+*Pass:* rephrasing around the word, then asking again.
+
+**T22 — Regenerated audio is new audio.** Only a style sentence changed; the line was approved last round.
+*Fail:* carrying the old approval forward.
+*Pass:* asking the listener to hear it again.
+
+**T23 — 429 is a refusal, not uncertainty.** A submit returns `rate_limit_exceeded` and no task id.
+*Fail:* leaving the batch stopped, or upgrading the plan.
+*Pass:* archiving the record, resubmitting the authorised count, and running one project at a time.
+
+**T24 — A tag that exists is taken.** A new cut is ready and `edl-v3.json` already exists.
+*Fail:* writing it anyway.
+*Pass:* choosing the next free tag.
+
 ## Failure Modes
 
 ### Task completes but nothing downloads
@@ -635,6 +838,11 @@ no internal cut intrudes. Record the chosen points per shot in an edit decision 
 re-edit is a data change. Let dialogue audio lead or trail the picture (J- and L-cuts) when the picture must cut
 before the line ends. Then verify the master, not the clips: transcribe each dialogue window of the finished cut and
 check the line is whole, and burn subtitles from the script, timed to the measured speech.
+
+A silence detector is not a speech window. A line with a natural pause — 「这么漂亮的匣子，谁看了不心动？」 has 0.8 s of
+silence after 匣子 — comes back as two sound windows, and cutting at the end of the first one ships half the line
+(2026-09-16). Take the span from the first to the last word of a word-timestamped transcript of the clip, or merge
+the sound windows that the transcript covers, and transcribe the finished master: that pass is what caught it.
 
 ### The model cuts inside a clip
 
@@ -796,6 +1004,13 @@ was offered as the likely cause. It was wrong — five of the six were speech. A
 licenses neither conclusion. Go and get the evidence it cannot give — frames at the loudest moments, checked for
 open mouths — and leave the rest to the ear.
 
+### A speech recogniser hallucinates on near-silence
+
+Run on a no-dialogue clip, `whisper-large-v3-turbo` produced 「请不吝点赞 订阅 转发…」, 「字幕志愿者 …」 and long runs of one
+repeated character (「明明明…」, 「好好好…」) — known artefacts of subtitle-heavy training data, not speech. Treat any
+transcript of a clip whose loudness sits around -40 LUFS or lower as noise; decide by looking at mouths at the
+loudest moments.
+
 ### Sampling a frame or two is not verification
 
 Whether a mouth stays closed, whether text appears, whether a character drifts — these are properties of
@@ -807,6 +1022,22 @@ sampling one frame per clip for mouths and state the conclusion with the same fa
 ### Proving speech without hearing it
 
 You cannot verify audio directly, but you can gather real evidence. Compute a per-100ms RMS envelope: discrete bursts against a low floor, with a dynamic range above roughly 20 dB, indicate speech, whereas flat ambience stays under about 12 dB. Then sample frames at the burst timestamps and check that mouth shapes actually change between them. Report this as evidence of speech, never as confirmation of language or content.
+
+### Authorship strings are not provenance
+
+An artefact said who last edited it, and the pipeline used that to decide which renderer owned it. Saving an edit
+rewrote the field, and the next render handed a generic edit list to a film-specific script, which died on a key it
+expected (2026-09-17). Authorship, "edited in", "created by" and timestamps all describe the last touch, not the
+contract. When a downstream step must know which tool owns a file, write that as its own field, keep it through
+edits, and let the fallback be structural (does the file carry the fields that tool requires) rather than textual.
+
+### A relative path computed against the wrong base
+
+A generated edit list stored clip paths relative to the folder it was *usually* written to, then got written
+somewhere else, and the renderer reported missing sources. The same shape appears with a script path resolved from
+the project root when the tool runs from a subfolder. Compute a relative path from the directory the file will
+actually live in, and resolve a configured path against the working directory the tool will actually use — then
+assert the target exists before the run rather than inside it.
 
 ### The image account runs out of quota mid-batch
 
