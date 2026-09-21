@@ -33,6 +33,11 @@ gates, with their own limits to check.
 Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
 
 - It **does** generate intelligible spoken Mandarin with matching lip movement, directly from a keyframe and a prompt containing the line. No external text-to-speech was needed. The verdict came from a human listening to the output, not from automated analysis. Confirmed four times — most recently on the prompt-language A/B (2026-09-10), where both versions spoke Chinese and the difference between them was quality, not language — and on an 18-shot film (2026-09-10) that also settled a further question: **two distinct voices can hold across one cut** — a teenage girl and a small child, each with its own voice bible, stayed in character over thirteen speaking shots.
+- **You can attach a voice sample, and Agnes accepts it** (2026-09-21, `agnes-video-2.5-flash`): pass a short
+  clip of the character's voice in `audios` in `reference` mode and name it in the prompt as `<Audio 1>`. The task is
+  accepted and completes; in the one A/B pair run so far the listener judged the voice closer to the sample than the
+  same prompt without it, and none of the sample's words leaked into the new line. The price is the first frame —
+  reference mode will not take one. Recipe under "A voice sample, or a voice description" below.
 - **There is no switch that turns the generated soundtrack off**, and no negative-prompt field — checked against
   the vendor's own API reference (2026-09-11), not a summary. Nor can you hand it a clean track while keeping the
   approved first frame: keyframe mode rejects `audios`, and the reference mode that accepts `audios` rejects
@@ -67,6 +72,13 @@ Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
   frame to the last"** at the top of the video prompt stopped it: **verified** on the next fifteen tasks
   (2026-09-15), zero internal cuts, including a moving point-of-view walk and a slow push-in. Detect it rather than
   trusting it — see *The model cuts inside a clip* below.
+- **But a cut you script is a capability, not a defect.** The unbroken-take rule cures *unscripted* cuts. Asked
+  explicitly for three timed shots in one clip, the same model delivers them on time: a 3 s + 6 s + 3 s street
+  scene (2026-09-21, `agnes-video-2.5-flash`, **keyframe** mode) cut at 3.08 s and 9.92 s — exactly two cuts, no
+  extras — with each line landing inside its own shot. A vendor web portal built on the same models does
+  this routinely: three of its clips cut at 3.04/9.00, 3.00/6.21/8.04 and proportionally on a third. Keep the
+  unbroken-take sentence for single shots; for a scripted sequence replace it, never combine the two. See
+  *Scripted multi-shot sequences* below.
 - An API key for the video models may carry **no speech or TTS model at all**. List the available models before
   promising anyone a TTS fallback — and list them again before assuming which *stage* the vendor can serve.
   The same key that runs the video may also carry image models, in which case reaching for an unrelated CLI
@@ -106,6 +118,37 @@ one paid image) surfaced three limits in one attempt, all of which apply to any 
 7. **Never state billing you did not check.** Say it is an assumption, and say so explicitly.
 
 ## Workflow
+
+### Before anything: agree where the run is driven
+
+Ask once, at the start, and record the answer on the project page. There are three ways to run the same pipeline,
+and the person may switch between them mid-project:
+
+| Mode | Who does the work | What the other side does |
+|---|---|---|
+| **Agent** | The agent writes the storyboard, blocking, prompts and task files, and runs generation, hosting and submission through its own scripts. | The control surface is not touched; it can open the project later and see everything. |
+| **Control surface** | The person drives the canvas: writes shots, generates cards and keyframes, approves, submits, cuts. | The agent advises, reviews what came back, and fixes files when asked. |
+| **Both** | The agent authors and checks (storyboard, blocking, prompts, cards, self-review); the person reviews, approves and watches progress in the canvas. Each stage names which side dispatches it. | — |
+
+They interoperate because **the files are the product** (see *Driving this from a local control surface*): both
+sides read and write the same task files, generated images, approvals and job records, so "syncing" means the other
+side re-reading, never copying. What keeps them from colliding:
+
+- **One dispatcher per lane at a time**, across every project on the account — the free tier rate-limits the
+  account, not the project. Before an agent-side submission, check the control surface has nothing queued or running
+  in that lane in *any* project.
+- **A hand-off waits out the spacing.** A probe that submits one task and hands the rest to the other side caused an
+  HTTP 429 four seconds later. Wait the full inter-submission gap first, or let one side send everything.
+- **The control surface's selected project is shared.** Switching it to inspect another project changed what the
+  person was looking at while a video round ran there. Read through files, or ask before switching.
+- **Agent-side runners call providers exactly the way the control surface does** — same command, stdin closed, same
+  output paths, same result fields in the task file — so either side can pick up the other's work.
+- **Before handing a project to the control surface, mark superseded versions** rejected, with the reason, so its
+  review queue shows only what is live.
+- **Never restart the control surface while any job runs in any project**; a restart marks running jobs
+  interrupted.
+- **The person can change modes by saying so.** "Don't touch the canvas for now" and "sync it now" are both normal
+  instructions; the files make either one cheap.
 
 ### 0. Source analysis, for a long work (before gate 1)
 
@@ -552,16 +595,63 @@ gate 2: no reduplicated characters, no line-final question word, no polyphonic c
 A local speech recogniser helps as a tripwire (it transcribed the swallowed line as 「很久久久」 both times) but never as
 the verdict — it also turned correct lines into near-homophones (「穀粒」→「古力」, 「馴服」→「巡浮」).
 
-### A voice cannot be pinned; only its description can
+### A voice sample, or a voice description
 
-The video API has no voice id and keyframe mode will not take an approved recording. What can be held constant is the
-voice block, so audit it: extract the `VOICE:` paragraph from every submitted prompt across every round and compare
+The video API has no voice id, and keyframe mode will not take an approved recording — only reference mode takes a
+voice sample (below). In keyframe mode what can be held constant is the voice block, so audit it: extract the `VOICE:` paragraph from every submitted prompt across every round and compare
 hashes. The audit found three shots of the first episode still carrying the pre-fix block after the rest had moved on.
 And say plainly that **every regeneration is a new recording**: lines already approved by ear must be listened to
 again, even when the only change was a style sentence.
 
 A stronger voice block did help: naming the speaker as a native Mandarin speaker "like a primary-school Chinese
 teacher on national television … no foreign or non-native accent" removed most of an accent a listener had flagged.
+
+**Checked against the vendor's own model page (2026-09-21):** `agnes-video-2.5-flash` has **no** voice, speaker,
+timbre, `voice_id` or TTS parameter. The only audio input is `audios` — up to three reference clips, addressed in the
+prompt as `<Audio N>` — and it exists **only in `reference` mode, which rejects `first_frame`**. So a pinned voice
+costs the keyframe as frame one; that trade is the whole decision. A vendor portal built on the same models offers
+"upload a 5-second sample" and "generate a timbre from a description" as reusable voice ids. The vendor's only
+documented example uses `audios` for rhythm and ambience ("以 `<Audio 1>` 的节奏和环境氛围作为参考"), never for a voice.
+
+**Tested once (2026-09-21, flash, one A/B pair):** a 5 s clip of the lead's own voice (cut from a finished shot,
+normalised to -18 LUFS, hosted on its own 24h channel) went in as `<Audio 1>` with a new line the sample never says,
+and the prompt told the model to use it "only as the sound of his voice: do not play it, and do not say any of its
+words". Control B was identical minus the paragraph and `audios`. Flash accepted it; ASR heard the new line in both
+and none of the sample's words (tripwire passed); **the listener judged A closer to the sample than B**. A rough
+pitch measure did *not* show it (A 120 Hz, B 119 Hz, sample 131 Hz) — the ear caught what the number missed, so do
+not use pitch as the verdict. Costs seen in the same pair: reference mode re-framed the keyframe (close-up became
+a medium shot) and drifted the face younger and more retouched. One pair is a lead, not a rule: before a whole film
+leans on it, repeat it on a second character and a second line, and weigh the lost first frame shot by shot — a
+voice sample suits a talking head whose framing can drift, not a shot whose composition the blocking fixes.
+
+**How to attach a voice sample:**
+
+1. Cut 4–6 s of the character speaking alone — from an approved clip, or a recording the user supplies — with no
+   music or second voice. Normalise it (`loudnorm=I=-18`) and export mp3.
+2. Host it like a keyframe: its own Firebase preview channel, 24h expiry, **its own confirmation** (it is a deploy),
+   then check HTTP 200, `audio/mpeg` and SHA-256 against the local file.
+3. Submit in reference mode — no `first_frame`; the approved keyframe goes in `images` as a style/identity reference:
+
+   ```json
+   {"model": "agnes-video-2.5-flash", "mode": "reference", "seconds": "5", "size": "720P",
+    "aspect_ratio": "16:9", "n": 1,
+    "images": ["https://<channel>/S15.png"],
+    "audios": ["https://<voice-channel>/voice_C1.mp3"],
+    "prompt": "... VOICE: he speaks in exactly the voice of the man speaking in <Audio 1> — the same timbre, pitch, speaking rate and accent. Use <Audio 1> only as the sound of his voice: do not play it, and do not say any of its words. ..."}
+   ```
+
+   Keep the written voice sheet in the prompt as well; the sample adds to it, it does not replace it.
+4. Check: ASR must hear the new line and none of the sample's words (tripwire); frame the output against the
+   keyframe for framing and face drift; then **the user listens** — the agent cannot judge a voice, and a pitch
+   number is not a verdict. Record the verdict and who gave it.
+5. Up to three `audios` per task, so a two-speaker shot can carry `<Audio 1>` and `<Audio 2>` — untested; A/B it
+   before relying on it. The same page lists a `seed` parameter this
+pipeline has never used, and confirms **4–12 s** per clip: a portal clip planned at 15 s came back at 12.26 s.
+
+**Keep the voice sheet to the voice.** A sheet that ends "only he speaks in this shot; everyone else stays silent"
+carries a per-shot staging rule inside a per-character block, and copied verbatim into a two-speaker clip it
+contradicts itself. Put timbre, pitch, rate, accent and delivery in the sheet; put *who speaks in this shot* in the
+shot.
 
 ### Card gate and card shape
 
@@ -601,16 +691,225 @@ A round that must finish before a channel expires says so when asking for approv
 
 - **Speed variants**: speed the picture with `setpts=(PTS-STARTPTS)/k` and the sound with `atempo=k` (pitch kept),
   scale the subtitle times by the same factor, and leave title cards, still push-ins and the closing hold at normal
-  speed. Keep each speed as its own edit-list version and master name.
+  speed. Keep each speed as its own edit-list version and master name. **Check the renderer really uses `atempo`**:
+  one applied `setpts` to the picture but cut the audio to the new length with `atrim`, so a 1.25× master silently
+  dropped the last fifth of every line (2026-09-21). And in ffmpeg put `-t` **before** `-i` when cutting the body off
+  a master to speed it — after `-i` it limits the *output*, which a sped-up body never reaches, so the whole master
+  including its title card got sped and the card then appeared twice.
 - **`alimiter` normalises by default.** Its `level` option defaults to on and lifts the whole mix to the limit;
   pass `level=false` wherever a limiter is meant only as a ceiling, then re-measure every master.
 - **Wrap subtitles at punctuation.** A character-count wrap split 「市集」 across two lines; break after the last comma or
   enumeration mark in the line when one exists past the first third.
 - **Traditional-Chinese checkers over-correct.** OpenCC `s2hk` rewrote 「群」 as 「羣」; keep a short allow-list of the
   house forms a project has decided on, and fail on everything else.
+- **A brand mark belongs in the edit list, not in the prompts.** Generators are told to produce no logos, so the
+  mark is overlaid in assembly: put `watermark` in the EDL (overlay PNG, whether to skip the title card) and fail
+  loudly if the file is missing. Overlay a *still* PNG with `-loop 1` on its input — without it the overlay is a
+  single frame and vanishes after the first frame. Gate it with `enable='gte(t,<title_end>)'` so it does not sit on
+  the title card, and render the watermarked cut under its own master name rather than over the clean one.
 - **Never write over a versioned file.** A new edit list was saved under a tag that already existed and destroyed a
   1.5× speed variant (not in git). It was rebuilt from its 1.25× sibling and proved identical against the rendered
   timeline, but the rule is simpler: check the name is free and fail if it is not.
+
+## Lessons from driving the whole pipeline through a console (2026-09-18/19)
+
+The earlier runs had an agent writing prompts and task files in the repo while a canvas displayed them. Moving
+authoring into the console surfaced a different class of problem: not "did the model do a good job" but "does
+the person driving it ever know what is going on".
+
+### Compose prompts from the project instead of asking for them
+
+A shot's image prompt is not creative work that has to start from a blank box: the project already holds the
+staging, the sheets of everyone in frame, the props, the line and the house style. Assemble it and let the user
+edit. The assembly is deterministic — no model call, no cost, no waiting — so a task dialog can always open
+filled in. Shape that held up:
+
+    image  【frame】staging + camera move
+           【<name> · copy verbatim】the character sheet, **unedited**
+           【<scene> · copy verbatim】the scene sheet
+           【<prop>】each prop in frame
+           【style】the project's one style sentence
+           【never】no text, letters, numbers, labels, subtitles, watermark, signature, logo; no extra fingers
+           【not in this shot】only this character, or nobody at all
+
+    video  the unbroken-take sentence
+           the style lock, **repeated here** — the keyframe's style does not carry over by itself
+           the scene in prose, then what happens, then the camera
+           VOICE: the voice sheet, **unedited**, and who is the only speaker
+           the line, marked "say exactly this, do not change or add words"
+           no subtitles, no on-screen text, no watermark, no logo
+
+Two fields are quoted **verbatim and never paraphrased**: the character sheet and the voice sheet. Paraphrasing
+either is how a face or a voice drifts between shots, and the drift is invisible until the clips are side by side.
+
+### A voiceover shot needs the opposite instruction
+
+The composer's first version saw "this shot has a line and a character" and helpfully added *"…is about to speak;
+face and mouth completely unobstructed."* The shot it did that to read: *"voiceover narration, the old man has his
+back to camera, no lip sync."* Exactly backwards, and it would have produced the single most common defect in this
+pipeline: the video model lip-syncs whatever face it can find whenever there is speech on the track.
+
+So classify the shot before composing. When the staging says voiceover, narration, back to camera or no lip sync,
+invert every instruction: the image prompt says the mouth does not move, the video prompt says the person on
+screen does not speak while the line is narrated over them. Keyword matching on the staging text is enough to
+catch it, and it is worth doing because the failure is silent — the clip looks fine until someone notices the
+mouth is moving to words the character is not saying.
+
+### Generated line hygiene can be checked, not just hoped for
+
+The mispronunciation table earlier in this file was learned one re-roll at a time. Most of it is mechanical, so
+check a draft before anyone spends a video call on it: reduplication in both shapes (`AA` like 「看看」 and `ABAB`
+like 「很久很久」), a line-final question word, a line long enough that the reading drifts, a character sheet too
+thin to hold a face. Report these as advice, not as a gate — the person may have a reason — but report them at
+the moment the draft appears, not after the clips come back.
+
+### A model's draft must never write the project directly
+
+When a text model proposes a whole shot list, the tempting shortcut is to write it straight into the project
+files. Don't. Write it to a disposable draft, show it per shot with a checkbox, and on approval push it through
+**the same validated save a hand edit uses** — same id rules, same "this scene does not exist" refusal, same
+"you cannot delete a shot that already has a keyframe". A draft is then always discardable, applying is never a
+special path, and a bad generation costs nothing but the click that throws it away.
+
+### The console has to say what it is doing
+
+Three separate reports of "it is stuck" this week were all the console failing to narrate work that was in fact
+proceeding normally:
+
+- **A long job with no progress line reads as a dead button.** A two-minute storyboard call showed nothing at
+  all, because the page read job state from an endpoint that does not carry jobs. Show the state, how long it
+  has been running, and what happens when it finishes; refresh the page yourself when it does.
+- **"Queued" explains nothing.** Say what it is waiting for: "one image job at a time; waiting for «…» to
+  finish". Otherwise a correct queue looks like a hang, and the user starts clicking.
+- **A batch action must count the work that does not exist yet.** "Generate all keyframes" looked only at tasks
+  already created, so on a project with one hand-made task out of twelve shots it reported *everything is
+  already generated* — while eleven shots had no task at all. A batch over a pipeline stage covers items not yet
+  started, items started but incomplete, and items done; say how many fall in each bucket before acting.
+
+### Small things that make a console honest
+
+- **Multi-select lists need select-all and a live count.** A column of checkboxes with no count and no select-all
+  is a manual chore, and the primary button should state what it will do with the selection
+  ("Create task (with 3 reference images)"), so it is not a leap of faith.
+- **Confirm that an approval landed.** Approve re-rendered the whole dialog, the page jumped, and it read as if
+  nothing happened. A state line at the top and a brief confirmation on the click are enough.
+- **Match the script the project is written in.** A composer with hard-coded Traditional labels emitted half
+  simplified, half traditional prompts on a simplified project. Detect from the project's own text.
+- **Never store a secret where the code lives.** Keys belong outside the repo, mode 600, with the shell's own
+  environment variable winning over the stored copy, only the last four characters ever echoed back, and nothing
+  written to a log. And whatever detects "is this configured" must read the same place the provider reads, or
+  the panel says ready while every call fails.
+
+### Detection that reads a path owned by another tool
+
+A blanket rename across a module (`credentials` → `keystore`) rewrote a *data string* along with the code, so
+the check for the Claude CLI's login looked for `~/.claude/.keystore.json`. The user logged in repeatedly and
+the panel kept saying "not logged in". Any string naming a file another tool owns is data, not code: keep those
+paths in one table and pin them with a test that asserts the exact value.
+
+Related: detecting an OAuth CLI by "the command exists and its credential file exists" cannot see an **expired**
+session. A logged-out-by-timeout CLI passes the check and fails at call time. Say so in the UI rather than
+implying a green check means the next call will work.
+
+## Scripted multi-shot sequences (2026-09-21)
+
+A 28-shot comedy was generated one shot per clip, the way this document describes. A vendor web portal built on the
+same models packs a whole beat — three or four shots — into one clip instead, each with its seconds, shot
+size, camera and landing frame. One controlled test on this pipeline showed the capability holds here too, and that
+the portal's writing style and this document's blocking fix each other's weak point.
+
+### What the model does when asked
+
+Same street beat, same first frame, same lines, one variable changed:
+
+| | One clip per shot (S14/S15/S16) | One scripted clip, 3 s + 6 s + 3 s |
+|---|---|---|
+| Generations | 3 | 1 |
+| Cuts | none, by design | 3.08 s and 9.92 s — exactly two |
+| Lines | one per clip | all three, each inside its own shot |
+| Reverse angles | both close-ups show the same skyline — a cheat | shot 1 shows Pudong behind them, the reverses show the Bund opposite — geographically right |
+| Sound across the cut | joins built in assembly | continuous; her line started 0.5 s before the cut to her, over his close-up, and his mouth stayed shut — a clean reaction shot |
+
+The economics matter as much as the craft. Packed by location, 28 shots are about **nine** generations, and on a free
+tier where one submission can wait twenty minutes for a queue slot, that is most of a day.
+
+### What it gets wrong, and why blocking fixes it
+
+**A person appears twice.** "Her shoulder soft in the foreground" without a side produced *two* identical women, one
+either side of him. **Screen direction flips.** Shot 1 had her left and him right; the reverse over his shoulder put
+him left and her right — the camera crossed the line. The portal's own clips show the third failure this document
+already guards against: a line spoken while the speaker's face is cropped out of frame.
+
+All three are geometry, and the blocking pass already has it. So a scripted sequence is written *from* the blocking:
+
+- **Fix screen direction once, above the shots**, from the actors' positions: "THE WOMAN is always on the left of
+  frame, THE MAN always on the right; the camera never crosses to the other side of them."
+- **Name the shoulder and the edge** in every over-the-shoulder: "behind her; only the back of her head and her
+  right shoulder, at the LEFT edge of the frame; nobody at the right edge."
+- **Count people**: "each person appears exactly once in every shot", mirrored in the negatives ("no second woman,
+  no duplicated person, never the same person on both sides of the frame").
+- **Run the cone and mouth-orientation checks per sub-shot**, not per clip. A speaker off-frame is a failure whether
+  it happens in shot 1 or shot 3.
+
+### Shape of the prompt
+
+    This clip is N shots cut together, exactly as timed below. Cut only at <t1> s, <t2> s; no other cuts.
+    Each shot picks up exactly where the previous one landed.            ← replaces the unbroken-take sentence
+    <style lock>
+    SCREEN DIRECTION — fixed for all shots: …                          ← from the blocking
+    [SCENE] … [CHARACTER · COPY VERBATIM] …
+    SHOT 1 (0–t1 s) — size, height, camera, who is where, what happens. Lands on: …
+    SHOT 2 (t1–t2 s) — … picks up from that landing. Lands on: …
+    VOICE (<name>): <voice sheet, voice only>                           ← one per speaker
+    DIALOGUE — each line spoken only inside its own shot, by the person named. Say exactly these words.
+    Shot 1 — <NAME>:
+    <line>
+    <no-text clause>
+
+The **landing → pick-up** chain is the portal's real craft: each shot says where it ends, the next says it starts
+there. The lines stay in their own block, one per shot, as this document already requires — the portal inlines them
+among the stage directions and a speech recogniser found no stage direction read aloud across its three clips, which
+is weak counter-evidence to that rule, not a reason to drop it.
+
+### When to use which
+
+Use a scripted sequence for **one continuous beat in one place** — a conversation, a reveal, a walk. Keep one clip per
+shot where a single shot must be redone alone (a sequence is regenerated whole), where the keyframe must govern
+every shot (only shot 1 has a first frame; later shots carry identity by text), and for every shot that needs the
+unbroken take. Sequences are capped by the 12-second clip limit; a beat that needs more is two sequences.
+
+**Status — verified 2026-09-21 on two clips of the same beat.** The first, written without the geometry, showed both
+failures above. The second changed only the wording in this section — screen direction stated once, the shoulder
+and frame edge named, one person per shot, the negatives mirrored — and both failures were gone: one woman, at the
+left edge only; her left and him right in all three shots; cuts at 3.12 s and 9.42 s against a plan of 3 and 9; every
+line inside its own shot. The listener judged the two voices acceptable. Two clips of one beat is a strong signal,
+not a law — re-confirm on the first real round.
+
+### Running a queue you do not control (2026-09-20/21)
+
+- **The free tier's queue has hours.** One afternoon: four hours, 48 probes, all `video_queue_full`. 03:00 the next
+  morning the first probe got in; between 06:15 and 07:33, twenty clips completed. Schedule unattended rounds for the
+  early morning and probe with one real submission rather than hammering a full queue with the whole batch.
+- **A probe and a dispatcher are two senders.** A probe submitted shot 1 and handed the rest to the canvas, which sent
+  shot 2 four seconds later: HTTP 429. The dispatcher's 61-second spacing only counts what the dispatcher sent. Wait
+  out the spacing before handing over, or let the dispatcher send the probe too.
+- **A record on disk is not a submission.** Job records are written *before* the POST, which is what makes an
+  interrupted submit recoverable — so counting record files counts attempts. Count records that hold a video id.
+- **A dispatcher with a deadline needs feeding.** The canvas stops a video job after two hours. At twenty minutes per
+  queue slot that is three clips, then `failed`. Re-confirm when it stops; records that hold a video id are polled,
+  never resubmitted, so re-confirming is safe.
+- **Changing API keys does not change the queue.** A second key authenticated fine and got the same
+  `video_queue_full`. Its billing endpoint reported a payment method and an open limit, yet a non-flash submission
+  was refused with `insufficient_user_quota, remaining $0.000000`. Only a submission tells you the balance; the
+  OpenAI-compatible billing endpoints return boilerplate.
+
+### A detector that never fires is not evidence either
+
+The shot-change scan found zero internal cuts in 28 clips. Before believing it, it was run on two clips joined end to
+end — one hit, at the join — and on a single clip — none. A subtitle screen that also reported zero was given a frame
+with text drawn onto it and **missed it**: night footage puts more bright pixels in the lower third than a caption
+does. It was discarded and the frames were judged by eye. A silent detector needs a positive control exactly as a
+noisy one needs a negative control.
 
 ## Round Isolation
 
@@ -619,6 +918,10 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 ## Validation Checklist
 
 - Source identity confirmed from raw content, not a summary.
+- Character sheet and voice sheet quoted verbatim in every prompt that uses them — never paraphrased.
+- Voiceover shots forbid lip movement instead of demanding a visible mouth.
+- A model-proposed shot list was reviewed as a draft and applied through the ordinary validated save.
+- Every long-running step shows progress; no step leaves the operator guessing whether it is working.
 - For a long work: length and chapter gaps measured, cast counted from the text, character bible written by stage
   with each line tagged stated or inferred and cited; no source text committed.
 - Blocking exists before any shot prompt: every actor and camera placed, every shot citing a camera.
@@ -659,6 +962,16 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - Every regenerated dialogue clip re-listened, including lines approved in an earlier round.
 - New lines screened for reduplication, line-final question words and avoidable polyphonic characters.
 - A versioned output's name checked free before writing.
+- A scripted sequence: cut count and timing match the plan; screen direction written once from the blocking; every
+  over-the-shoulder names its shoulder and frame edge; each person appears once per sub-shot; cone and mouth checks
+  run per sub-shot.
+- Voice sheets hold only the voice; who speaks is stated per shot.
+- A speed variant's audio uses `atempo`; the master's line endings checked, not just its total length.
+- Every automated screen shown to fire on a positive control and stay quiet on a negative one before its result is
+  reported.
+- Progress counted from records holding a video id, not from record files.
+- Where the run is driven (agent, control surface, or both) asked at the start and recorded; one dispatcher per lane
+  at a time across every project; no restart of the control surface while any job runs.
 
 ## Regression Tests
 
@@ -763,6 +1076,49 @@ nothing about style.
 *Fail:* writing it anyway.
 *Pass:* choosing the next free tag.
 
+**T25 — The deliverable ends the wait, not the process.** A CLI writes its output file and then sleeps for a
+minute. The driver returns as soon as the file is complete and stable, well before the process exits, and leaves
+no child running. A file that is still growing must not be mistaken for a finished one.
+
+**T26 — A voiceover shot inverts the mouth instruction.** A shot whose staging says narration / back to camera
+produces an image prompt that forbids lip movement and a video prompt that says the person on screen does not
+speak — while the line itself is still narrated.
+
+**T27 — A draft cannot corrupt the project.** A generated shot list that references a scene which does not
+exist is refused at apply time with the offending shot named, and the project files are left byte-identical.
+
+**T28 — A batch covers work not yet started.** With one task created out of twelve shots, "generate all"
+reports eleven to create plus one already done — never "everything is already generated".
+
+**T29 — External paths are pinned.** The recorded auth-file path for each OAuth CLI equals the path that tool
+actually writes. A rename that changes one of these strings fails the suite.
+
+**T30 — A scripted cut is not an intrusion.** A clip was asked for three timed shots and the detector finds two cuts.
+*Fail:* flagging them as internal cuts and regenerating with the unbroken-take sentence.
+*Pass:* checking the cuts against the planned boundaries — two planned, two found, each within a second — and passing it.
+
+**T31 — Over-the-shoulder names a side.** A sub-shot reads "her shoulder soft in the foreground".
+*Fail:* sending it; the model may put her on both sides.
+*Pass:* naming the shoulder and the frame edge from the blocking, and stating she appears once.
+
+**T32 — A two-speaker clip does not copy a one-speaker rule.** Both voice sheets end "only he/she speaks in this shot".
+*Fail:* pasting them verbatim into a clip where both speak.
+*Pass:* the sheets carry the voice only; the dialogue block says who speaks in which shot.
+
+**T33 — A silent screen gets a positive control.** A subtitle detector reports zero hits across 112 frames.
+*Fail:* reporting "no burned-in subtitles".
+*Pass:* drawing text onto one of those frames, finding the detector misses it, discarding it and judging by eye.
+
+**T34 — Two senders share nothing.** The agent probes the queue with one submission, it gets in, and the rest of the
+batch is handed to the control surface.
+*Fail:* confirming the batch immediately — the next submission lands seconds after the probe and draws a 429.
+*Pass:* waiting out the inter-submission gap before handing over, or letting one side send the whole batch.
+
+**T35 — Switching the shared view is an action.** The person is running a video round in project A; the agent wants
+to inspect project B.
+*Fail:* selecting B in the control surface to read its jobs.
+*Pass:* reading B's files directly, or asking before switching.
+
 ## Failure Modes
 
 ### Task completes but nothing downloads
@@ -797,6 +1153,15 @@ so the timeout can fire after the file has landed. A driver that treats every ti
 overwrites a good image with a second attempt (2026-09-15, caught only because the file's timestamp predated the
 timeout). After a timeout, check whether the output exists at a plausible size and keep it if it does; retry only
 when it does not. And never let a retry overwrite an existing output — write each attempt to its own name or skip.
+
+**Better: stop waiting when the file is done, not when the process is.** Waiting for exit is not just slow, it
+looks broken. One character card landed on disk about a minute in; the CLI then spent **nine more minutes**
+writing its closing summary (a 405 KB log) while the console sat on "generating". The user concluded it was
+stuck and pressed generate again, which queued a duplicate behind it. The deliverable is the contract, so poll
+for it: once the file is *complete* and has stopped growing for a couple of seconds, end the process. Complete
+means structurally complete, not merely non-empty — a PNG carries its `IEND` chunk, a JSON parses. Keep the
+timeout as the backstop, and make sure the child is killed on every exit path so a leaked CLI cannot burn quota
+later.
 
 ### Burned-in subtitles
 
@@ -852,6 +1217,10 @@ an intrusion. On the clips that had internal cuts, the segments after the cut ca
 costume, an extra person, another location — so the usable part was almost always before the first cut. Trim to it,
 and regenerate the shot with the unbroken-take wording if what remains is too short. A dark night scene can hide real
 cuts from the detector at that threshold; lower it for dark footage and confirm by eye.
+
+For a **scripted** sequence the same detector becomes the acceptance test: the hits must match the planned boundaries
+in number and land within about a second of them. A missing cut means two shots merged; an extra one is the old
+intrusion.
 
 ### Dialogue too quiet in the master
 
