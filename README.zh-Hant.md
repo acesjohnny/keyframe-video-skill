@@ -133,7 +133,7 @@ examples/tangbao-hatches/
 
 ```
 SKILL.md          skill 本體（英文，權威版本）
-SKILL.zh.md       較早的中文版 —— 尚未與 SKILL.md 同步
+SKILL.zh.md       中文版，與 SKILL.md 同步更新
 README*.md        本頁：簡體中文（預設）、英文、繁體中文
 examples/         上面的範例
 docs/images/      本頁的插圖

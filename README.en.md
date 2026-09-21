@@ -131,7 +131,7 @@ This was the **second** run of the workflow. It predates blocking, character car
 
 ```
 SKILL.md          the skill (authoritative, English)
-SKILL.zh.md       an earlier Chinese edition — not yet brought up to date with SKILL.md
+SKILL.zh.md       the Chinese edition, kept in step with SKILL.md
 README*.md        this page: Simplified Chinese (default), English, Traditional Chinese
 examples/         the sample above
 docs/images/      the illustrations on this page
