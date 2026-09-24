@@ -189,6 +189,43 @@ Fetch the real source text and verify its identity from the raw content, not a s
 
 Present a shot table: shot, duration, visual, dialogue line, speaker. State plainly that the dialogue is original. Ask for art direction and the audio route up front, since both change every downstream prompt.
 
+#### Story shape and shot mix, for a film meant to be watched (from one reference, 2026-09-23)
+
+A capability test only needs a beat. A film meant for an audience needs a shape, and the shape can be planned to
+fit what the models do well. These points come from taking apart one widely shared AI short (13.5 minutes, about
+147 detected cuts, median shot 4 s) — one data point, not a measured rule; treat the ratios as a starting point.
+
+Before the shot table, write down two things and show them at gate 1:
+
+- **One thread-through object or idea** that every sequence returns to (in the reference: rice — a well that
+  gives rice, a grain picked up and called theft, a leaking jar, the last line "come and eat"). A shot that does
+  not touch it needs a reason to exist.
+- **One real-world landing** for the ending — a custom, a saying, a thing the viewer still sees today — so the
+  film ends with "so that's where it comes from". That is the reason people pass it on.
+
+Then check the shot table against these, which also steer around the models' weak spots:
+
+- **Front-load the spectacle.** Crowds, creatures and fire sat in the first ~17% of the runtime; after that,
+  almost none. The opening buys attention; the rest is carried by lines and faces.
+- **Dialogue as single-person close shots, cut every 1–3 s, one short line each.** The steadiest shot a keyframe
+  model makes, and short takes keep lip-sync short. This is the same grammar as *speak, then see* in gate 1.5.
+- **Many inserts and empty frames** — hands, a sack of grain, feet in snow, a reflection, fruit falling into snow.
+  They carry the emotion and hide continuity drift between character shots.
+- **Almost no action.** The one attack in the reference is two brief shots of the creature, with mist covering
+  the contact.
+- **Three leads, each with one mark you can see at thumbnail size** (white beard and robe; mud-spotted face;
+  white-ribboned hair). Put the mark on the character card (gate 2.5).
+- **Colour as meaning.** One cold base palette; the warm colour reserved for one idea (fire, food), and the ending
+  allowed to turn warm. Write the rule into every keyframe prompt's style block.
+- **Chapter title cards** in large calligraphy over an empty frame split a long film into parts, and make a jump
+  in look between parts read as intended.
+- **An emotional beat every one to two minutes.** Length is not the problem; a long stretch with nothing new is.
+
+To study a reference yourself: detect cuts with ffmpeg's `select='gt(scene,0.3)',showinfo` (at the default log
+level — `-v error` hides showinfo's lines), take one frame from the middle of each shot into a numbered contact
+sheet, and read burned-in subtitles by cropping the subtitle band and running OCR on it. For a film that has
+subtitles burned in, OCR is more accurate than speech recognition and needs no ASR model.
+
 ### 1.5. Blocking: put the film in a space before writing any shot (gate 1.5)
 
 Shots written as independent paragraphs of text have no shared geometry, and every continuity failure that a
@@ -911,6 +948,111 @@ with text drawn onto it and **missed it**: night footage puts more bright pixels
 does. It was discarded and the frames were judged by eye. A silent detector needs a positive control exactly as a
 noisy one needs a negative control.
 
+## A narrated film with no presenter, and TTS narration (2026-09-21/23)
+
+A 12-shot mooncake-history short was first built around a real person as on-camera presenter, then rebuilt with **no presenter at all**: watercolour illustrations animated as silent clips, narration generated separately by a text-to-speech API and laid under them locally. The rebuild is now the default shape for this kind of explainer, and it removed four defects at once.
+
+### Why the on-camera presenter was dropped
+
+The presenter version passed every gate — identity card, stress test, face probe — and the owner still judged the finished cut incoherent. Four causes, and none of them is fixed by a better prompt:
+
+- **One voice per clip.** A video model with no voice id casts a slightly different speaker in every clip; six speaking shots were six people.
+- **The face drifts exactly where the shot is hard.** Ordinary shots held; a single clip asked to orbit *and* change era *and* change costume came back as a different man, and reference mode drifted the face again.
+- **A costume change mid-episode** makes the audience re-identify the presenter, on top of jumping between five locations.
+- **The presenter interrupts the story.** Legend and evidence already have pictures; a person stepping in every few seconds to say one line pauses them.
+
+Default to no presenter for explainers. Keep the identity assets — they cost nothing to keep and the decision may reverse.
+
+### Narration as its own track
+
+Generate the picture and the voice separately, and mix locally:
+
+- **Picture**: every clip is generated as a *no-dialogue* shot (Chinese prompt, structured sound section, fixed expressions). Nothing on screen ever has to lip-sync, so the stolen-mouth failure cannot occur.
+- **Voice**: a TTS API returns one file per line, with a chosen voice id, fixed across the whole film. Line length is known before the shot list is finalised, so shot durations are planned from the audio rather than negotiated with the video model.
+- **Cost of a rewrite** drops to a few hundred characters of TTS instead of a regenerated clip, and subtitles are burned from the script itself, with speech recognition kept only as a tripwire.
+
+Measured on one vendor (MiniMax `t2a_v2`, 2026-09-23): 303 system voices (45 Mandarin, 6 Cantonese, the rest across a dozen languages), six models, eight emotion values, speed/volume/pitch, mp3 or wav. Two vendor limits worth writing down: **48 kHz was rejected** (32 kHz accepted), and **voice cloning was forbidden on the account** while "design a voice from a description" worked. Treat these as one dated observation, not a guarantee.
+
+### Two audio-editing rules that cost a re-render each
+
+- **Speech-recognition word times are a tripwire, not an edit point.** Cutting narration at the reported end of the last word clipped 「…今天这样的」; the reported end ran early. Take the head from the first word minus a margin and keep everything to the end of the file.
+- **Never silence-trim the tail of a narration line.** An unstressed final particle sits below a -45 dB threshold and gets eaten. The same lesson in reverse: trimming the head by the recogniser's first-word time ate 「所以」 at the start of a line; trim the head by silence detection instead.
+- **Leave the last word clear of the next transition.** A crossfade over the tail fades the final syllable out even when the audio is intact; pad each segment so speech ends at least ~0.9 s before the join.
+
+### The model can return a partly filled frame
+
+Several clips came back 1280×720 with the picture occupying only 1178×666 or 1172×660, black to the right and below, each clip different. On hard cuts the mismatched borders flash like a slide transition. **Run a black-border detection over every source clip before assembly** (intersection of `cropdetect` across the whole clip), crop to the content and scale to cover. Checking the finished master is not enough — measure each source.
+
+### Transitions: local, and fewer than you think
+
+Thirteen designed transitions (portals through a mooncake, a yolk becoming the moon, a torn-paper wipe, a moon-locked montage, an iris through a magnifying glass) were all built locally with `xfade`, custom `expr` wipes and still-frame zooms — no model calls, exact control, no style drift. The owner then cut **all** of them and kept a single closing push-in and freeze. Build transitions locally so they are cheap to make *and* cheap to throw away, and expect the restrained cut to win.
+
+### Music and fonts are licensing decisions, not asset hunts
+
+- The platform's own "free music" library (Douyin/CapCut here) typically licenses use **inside that platform**, which does not cover a film published elsewhere. Prefer a library whose licence is unconditional (Pixabay Content License was used), download with `curl`, and record track, author, page and licence in a `LICENSE.md` next to the audio.
+- Mix the bed at about -15 dB with a **sidechain compressor keyed by the narration**, fade in and out, then re-normalise the master.
+- A free font in a given calligraphic style may simply not exist: for clerical script, the GPL-licensed candidate carries a public infringement claim and was dropped by Debian, and the publicly-licensed foundry alternative was an old TTC that FreeType refuses. Say so and fall back to a clean OFL face (LXGW WenKai here) rather than shipping a risky one.
+
+## Lessons from a 31-shot replication pilot (2026-09-23/24)
+
+A two-minute mythological opening, 31 shots with seven recurring characters, three mounts and two props, was
+taken from cards to a mixed cut. Two image routes, one video model, one TTS route. What held and what did not:
+
+### Which image route for which shot
+
+| Shot content | Single-reference model (one `subject_reference`) | Multi-reference model (every card attached) |
+|---|---|---|
+| One person, close or medium | usually right first time when the face close-up is the reference | fine |
+| Empty frame, prop, lone creature | fine | fine |
+| Two or more people in frame | **faces merge**: the reference face bleeds into the others, ages and costumes swap | right first time |
+| Rider on a mount | the mount turns into a horse; the rider's forehead mark lands on the animal | right first time |
+| Hands only, no face | an unrelated person appears anyway, twice, despite the negative | right first time |
+
+On this run the single-reference model took 64 calls for 15 cards and 18 usable keyframes; the multi-reference
+route took 14 calls for 13 keyframes, every one usable on the first try. The user's verdict: **the
+single-reference model's character images are not good enough for a film meant to be watched.** Use it for empty
+frames and props at most; route every card and every keyframe with a person in it through a model that accepts
+all the cards in frame, and say in the prompt what not to inherit from them (grey background, side-by-side layout,
+neutral pose).
+
+### Cards
+
+- **One call per scale.** Asked for full-length views and a face close-up in one image, the single-reference model
+  returned three full-length figures twice. Generate the close-up, then generate the full-length turnaround
+  *with the close-up attached*, and compose the card locally. The attachment is what fixed a turnaround whose hair
+  had come back black while the close-up was white.
+- **A reference that is too strong is copied.** A turnaround generated with the close-up attached came back as
+  another close-up. When that happens, drop the reference and lean on the text.
+- **Age and sex drift is not fixed by adjectives.** A fourteen-year-old boy came back as a small girl twice. Stop
+  after two, and either accept the look (a younger traditional depiction was fine here) or change route.
+
+### Video
+
+- **Queue.** 31 clips submitted in the evening finished the next morning after 315 explicit queue-full refusals,
+  which cost nothing. A 48-hour hosting expiry, not 24, was the right call.
+- **Hard transformations worked first time**: a figure emerging from a column of fire, a body bursting into flame,
+  a bamboo scroll folding into a rod, a tilt down onto a prop.
+- **The 4-second floor changes the edit.** The reference cut every one to three seconds. Trimming 4–5 s clips down to
+  those lengths read as choppy to the user, who preferred every clip whole. Plan each shot at four seconds or more,
+  or put fast cutting *inside* a clip with a scripted multi-shot prompt.
+- **A spoken line often starts late**, around three seconds into a five-second clip. Set the in-point from the
+  speech segment, not from zero.
+
+### Voice
+
+- **Stock TTS voices pitched and slowed to play an old sage, a king and a child were rejected as poor.** For character
+  dialogue, generate one line as a sample and get a yes before generating the rest. On this account the vendor's
+  voice-design and music endpoints were unavailable (plan not supported; closed to new users).
+- **The video model's own voice is the fallback that keeps lip-sync**: keep its audio on on-camera lines, and treat
+  off-screen lines as a separate problem.
+
+### Post
+
+- **Unify the grade in post** when two image models disagree on a palette; do not regenerate to match.
+- **Subtitles and title cards as transparent PNG overlays** work where the local encoder has no text or subtitle
+  filter.
+- **Licensed stock music** needs its source page, author and licence recorded next to the file.
+
 ## Round Isolation
 
 A second run must not overwrite the first. Scripts that hardcode a single `output/` directory will clobber prior clips, job records and masters. Give every round its own subtree and its own shot definitions, and verify the no-argument path still behaves exactly as the first round did.
@@ -972,6 +1114,11 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - Progress counted from records holding a video id, not from record files.
 - Where the run is driven (agent, control surface, or both) asked at the start and recorded; one dispatcher per lane
   at a time across every project; no restart of the control surface while any job runs.
+
+- Every source clip measured for black borders (cropdetect intersection) and cropped to content before assembly.
+- Narration trimmed by silence detection, never by speech-recognition word times; no tail trim at all; the last word clear of the next transition by ~0.9 s.
+- Narration voice id, model and speed recorded; the same voice across the whole film.
+- Every downloaded music or font asset carries a licence note naming track, author, page and licence terms; platform-internal licences refused for films published elsewhere.
 
 ## Regression Tests
 
