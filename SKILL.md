@@ -484,7 +484,8 @@ decides whether this gate exists at all:
 |---|---|---|
 | The image model returns a hosted URL (`agnes-image-2.5-flash`, `response_format: url`) and the same URL goes to `agnes-video-2.5-flash` | No | **Verified** 2026-09-11 |
 | The video API accepts the image inline as a Base64 data URL (MiniMax's first-frame parameter, per its docs) | No | Vendor documentation only |
-| A temporary static host with an expiry — a Firebase Hosting preview channel, or an object-storage bucket with a signed URL | Yes | Firebase **verified** across six rounds; object storage not tested |
+| A static host whose transfer is not metered — a Cloudflare Pages preview deployment | Yes | **Verified** 2026-09-25/26: the video vendor fetched from `*.pages.dev` (first frame matched the hosted keyframe), then a full eight-clip round |
+| A temporary static host with a native expiry — a Firebase Hosting preview channel, or an object-storage bucket with a signed URL | Yes | Firebase **verified** across many rounds, but its no-cost transfer quota ran out (below); object storage not tested |
 | A local HTTP server behind a tunnel (Cloudflare quick tunnel) | Yes | **Verified** 2026-09-11 |
 
 What the two verified 2026-09-11 routes taught:
@@ -504,11 +505,39 @@ What the two verified 2026-09-11 routes taught:
   some DNS servers, UDP, or a provider's storage domain may be unreachable. Test it from the user's network before a
   round depends on it.
 
-For a temporary static host, Firebase Hosting preview channels work well, since they carry a native expiry. Use a **new, dedicated** channel with a short expiry rather than reusing an earlier round's — prior job records still cite those URLs, and overwriting them destroys that evidence.
+For a temporary static host, prefer one whose static transfer is not metered; Firebase preview channels also work and carry a native expiry, but read the quota note below first. Use a **new, dedicated** channel or preview deployment for each round rather than reusing an earlier round's — prior job records still cite those URLs, and overwriting them destroys that evidence.
 
 Before hosting, build the upload directory and scan it: API key strings, generic credential patterns, and image metadata for paths, prompt text or identity. Images from some generators embed a C2PA provenance manifest and an invisible watermark; harmless for internal tests, but disclose it, and think twice before reusing such images in public deliverables.
 
-State up front: the target, its expiry, the exact file list with sizes and hashes, the command, an explicit list of what will **not** be touched (production sites, other channels, database rules, auth settings, billing tier), how you will verify, and how to roll back.
+**Free hosting tiers meter transfer, and a queue multiplies it (2026-09-25).** One month of queue-heavy rounds
+exhausted a Firebase project's no-cost 10 GB/month of Hosting transfer. That quota is per project, shared by every
+site, preview channel and custom domain in it, and once the grace period ends every site in the project is disabled —
+including unrelated production pages. The bulk came from the dispatcher itself: it re-downloaded each hosted keyframe
+to check its hash before every submission attempt, and a busy queue refused about a thousand attempts at ~3 MB each.
+Verify each hosted file once, record it, and skip the download on retries. Keep keyframe hosting in a project of its
+own, or on a host whose static transfer is unmetered (Cloudflare Pages documents static requests as free and
+unlimited on every plan; 25 MiB per file, 20,000 files per site; no native expiry, so delete old preview deployments
+yourself).
+
+**Cloudflare Pages as the keyframe host (2026-09-25/26).** What the switch taught:
+
+- **Each deploy gets its own immutable URL** (`https://<hash>.<project>.pages.dev`) plus a branch alias that moves with
+  the next deploy to that branch. Submit and record the immutable one; it plays the role of a fresh channel.
+- **There is no native expiry.** The approval request states a cleanup plan instead of an expiry time, and old preview
+  deployments are deleted after the round. `wrangler pages deployment list --json` reports age only as relative text
+  ("9 minutes ago"), so a cleanup script has to parse that.
+- **Cloudflare answered 403 to Python's default `Python-urllib/x` User-Agent** while curl, `python-requests`, Go,
+  okhttp and browser agents got 200. Every self-verification fetch sets its own User-Agent; the video vendor's fetcher
+  was not blocked (its first frame matched the hosted keyframe).
+- **The first request seconds after creating a new project failed the TLS handshake**; a minute later it served.
+  Retry once before concluding anything.
+- **Current `wrangler` (4.140) delegates `pages project create` to Workers**, and that path refuses an empty project;
+  `--force` keeps it on Pages. Workers static assets is the vendor's direction for new projects and has not been tried
+  here.
+- A `_headers` file in the upload sets `Cache-Control: no-store` and `X-Robots-Tag: noindex` for every file; stage it in
+  a temporary copy so the caller's folder only ever holds the images.
+
+State up front: the target, its expiry or cleanup plan, the exact file list with sizes and hashes, the command, an explicit list of what will **not** be touched (production sites, other channels, database rules, auth settings, billing tier), how you will verify, and how to roll back.
 
 After hosting, anonymously GET every URL and compare SHA-256 against local, then re-list targets to prove production and prior channels were untouched. Save the result as JSON.
 
@@ -665,7 +694,7 @@ voice sample suits a talking head whose framing can drift, not a shot whose comp
 
 1. Cut 4–6 s of the character speaking alone — from an approved clip, or a recording the user supplies — with no
    music or second voice. Normalise it (`loudnorm=I=-18`) and export mp3.
-2. Host it like a keyframe: its own Firebase preview channel, 24h expiry, **its own confirmation** (it is a deploy),
+2. Host it like a keyframe: its own preview deployment or channel, **its own confirmation** (it is a deploy),
    then check HTTP 200, `audio/mpeg` and SHA-256 against the local file.
 3. Submit in reference mode — no `first_frame`; the approved keyframe goes in `images` as a style/identity reference:
 
@@ -720,8 +749,9 @@ owner's decision, never the agent's.
 
 ### Hosting reuse across rounds
 
-Later rounds reused the first round's preview channel instead of redeploying: before each submit, fetch every image
-anonymously again and compare hashes, write the result into the new round, and check the channel's remaining life.
+Later rounds reused the first round's preview channel instead of redeploying: at the start of each round, fetch every
+image anonymously again and compare hashes, write the result into the new round, and check the channel's remaining
+life. Verify once per round and record it — not once per submission attempt (see the transfer-quota note in gate 4).
 A round that must finish before a channel expires says so when asking for approval.
 
 ### Post-production details that bit
@@ -993,6 +1023,22 @@ Thirteen designed transitions (portals through a mooncake, a yolk becoming the m
 - Mix the bed at about -15 dB with a **sidechain compressor keyed by the narration**, fade in and out, then re-normalise the master.
 - A free font in a given calligraphic style may simply not exist: for clerical script, the GPL-licensed candidate carries a public infringement claim and was dropped by Debian, and the publicly-licensed foundry alternative was an old TTC that FreeType refuses. Say so and fall back to a clean OFL face (LXGW WenKai here) rather than shipping a risky one.
 
+### Three more episodes on the same pipeline (2026-09-24/26)
+
+- **The tail of a clip is where it drifts.** A long push-in slowly enlarged fake glyphs on a scroll until they filled
+  the frame; on a stone relief the oil-lamp flame wandered to sit beside the carved rabbit. Both first seconds were
+  clean. Keep the clean head, then hold its last frame with a slow local push for the rest of the line, instead of
+  regenerating.
+- **Reuse approved clips across episodes.** A toad shot and a notebook shot from earlier episodes carried a recap
+  line and a closing task in a later one, saving two tasks. Viewers of the whole series will notice the repeat; say so
+  when proposing it.
+- **Local effects need a look at the frame, not at the code.** Four local shots came back wrong the first time: a gold
+  glint drawn on a gold trunk was invisible, crop boxes picked empty sky, a push-in asked for more picture than the
+  image had and showed a flat pad colour, a pan moved too little to read. Extract frames of every local shot and look
+  before assembling.
+- **A narrator voice speaks about 3.4 characters per second at 0.92 speed**, not the 5 a rough estimate assumes; one
+  episode came out 27 seconds longer than planned. Synthesize the narration before fixing shot lengths.
+
 ## Lessons from a 31-shot replication pilot (2026-09-23/24)
 
 A two-minute mythological opening, 31 shots with seven recurring characters, three mounts and two props, was
@@ -1075,7 +1121,9 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - Character bible byte-identical across all shot prompts.
 - Hosting route chosen before generating, and shown to work from the user's own network.
 - Upload directory contains only intended files; credential and metadata scans clean.
-- Every hosted image: HTTP 200, expected content type, SHA-256 equal to local.
+- Every hosted image: HTTP 200, expected content type, SHA-256 equal to local — checked once and recorded, not re-downloaded
+  on every queue-full retry.
+- On a host with no native expiry, the round's preview deployments deleted (or scheduled for deletion) after it closes.
 - Production and prior hosting targets unchanged.
 - Task count within what was authorized.
 - Every shot's cast list matches who is *visible* in that shot, not just who acts.
@@ -1279,6 +1327,14 @@ url = result.get('url') or (result.get('metadata') or {}).get('url')
 ### A generation CLI refuses its own default model
 
 Server-side default models move ahead of installed CLI versions, and the failure reads as a hard 400 telling you to upgrade. Pin an older model explicitly before reaching for a full CLI upgrade; most such CLIs cache the list of available model names locally.
+
+### A generation CLI waits for network that is actually up
+
+The image CLI timed out twice with "Reconnecting… waiting for network" while both network routes reached the service.
+Its log showed it connecting to `127.0.0.1:<port>`: a separately installed bridge had rewritten the CLI's config to
+send requests to a local relay, and the relay was not running. When a CLI cannot connect, read which host its log is
+actually dialing before blaming the network, and do not rewrite a config another tool manages without the owner's
+say — it may keep an install journal with the values it replaced.
 
 ### An image flag swallows the prompt
 
