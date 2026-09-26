@@ -126,6 +126,9 @@ one paid image) surfaced three limits in one attempt, all of which apply to any 
 4. **Verify the source.** A fetched summary can be wrong about basic facts, including which chapter it is describing. Read the raw content before designing anything on top of it.
 5. **The agent cannot hear.** Audio envelope and lip-shape analysis prove *something is being spoken*; they never prove the language or the lines are correct. That verdict belongs to a human, and until it arrives the result stays recorded as unverified.
 6. **Never state billing you did not check.** Say it is an assumption, and say so explicitly.
+7. **Every shot carries subtitles, overlaid locally.** No unsubtitled delivery. Subtitles are generated per shot from the script's line field at assembly and overlaid as PNG layers; the model's own burned-in captions are never used (the prompt keeps forbidding on-screen text, and a shot that came back with captions gets that band blurred before the overlay). Set 2026-09-09 after a 17-shot film came back with captions on 2 shots and none on the other 15.
+8. **Deliver the master only.** When the master exceeds the messaging size limit, say it can only be watched on the desktop app and give the path; never transcode a low-bitrate preview copy on your own initiative (2026-09-15).
+9. **Both language versions ship together.** When this skill is published, `SKILL.md` and `SKILL.zh.md` are rendered and pushed in the same round, and a rule change edits both sources (2026-09-21; supersedes the earlier "Chinese lags" arrangement).
 
 ## Workflow
 
