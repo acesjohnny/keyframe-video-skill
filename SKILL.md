@@ -51,7 +51,15 @@ Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
   with the story playing behind them. That turns a negative constraint ("no one may lip-sync") into the
   positive one the model is already reliable at ("this person is speaking, everyone else is silent").
   **Verified** on a ten-shot rebuild (2026-09-09): six timepoints sampled across every shot showed the
-  storyteller lip-syncing and every character behind him mouth-shut, with no exceptions.
+  storyteller lip-syncing and every character behind him mouth-shut, with no exceptions. The other route,
+  now the default for explainers, is to take the narration away from the video model altogether: generate the
+  shot as a *no-dialogue* clip and lay a separately synthesized narration under it in assembly (see *A narrated
+  film with no presenter*). A prompt that says "the person on screen does not speak while the line is narrated"
+  is only safe on that route — never when the video model itself has to produce the narration audio over a
+  face. A voiceover shot with **no face in frame** (a prop, a desk, an empty landscape) is the one case where the
+  video model may still speak the line: submit it in `reference` mode with a voice sample from an approved clip of
+  the same film, which pins the voice across the episode's voiceovers (the user's rule, 2026-09-22, ear-verified);
+  with a face in frame that same reference submission made the person mouth the narration, so it stays TTS.
 - **Price, checked on the vendor's price page on 2026-09-11:** `agnes-video-2.5-flash` and the `agnes-image-*-flash`
   models were listed at $0 as a limited-time offer, while `agnes-video-2.5` (without Flash) was billed per second.
   Offers end; check the page again before quoting it.
@@ -64,7 +72,10 @@ Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
   is a variable the model casts against, and it is also the text it burns into captions.
   **Verified** 2026-09-09: nine clips of one character, previously wandering in timbre, came back as one
   voice after adding the block and stripping the per-shot tone lines. The verdict was a human listening,
-  not analysis — the agent cannot hear.
+  not analysis — the agent cannot hear. It narrows the wander; it does not pin a voice: on a later film
+  (2026-09-21) an on-camera presenter with a full voice bible still came back as six speakers across six clips
+  (see *Why the on-camera presenter was dropped*). For one voice across a whole film, plan on a voice sample in
+  `reference` mode or on narration from TTS, and treat the bible as the floor, not the fix.
 - **A clip can cut inside itself.** Asked for a shot, the model sometimes returns two or three shots in one clip —
   a reverse angle, a costume change, a stranger walking in, a different building — so a 5-second request yields
   2 usable seconds. On one 18-clip round (2026-09-14) seven clips did it. Writing **"one single unbroken take from
@@ -209,6 +220,8 @@ Then check the shot table against these, which also steer around the models' wea
   almost none. The opening buys attention; the rest is carried by lines and faces.
 - **Dialogue as single-person close shots, cut every 1–3 s, one short line each.** The steadiest shot a keyframe
   model makes, and short takes keep lip-sync short. This is the same grammar as *speak, then see* in gate 1.5.
+  With the model's 4-second clip floor, get that pace by scripting the cuts *inside* one clip (see *Scripted
+  multi-shot sequences*), not by trimming whole clips down — trimmed clips read as choppy (31-shot pilot).
 - **Many inserts and empty frames** — hands, a sack of grain, feet in snow, a reflection, fruit falling into snow.
   They carry the emotion and hide continuity drift between character shots.
 - **Almost no action.** The one attack in the reference is two brief shots of the creature, with mist covering
@@ -319,6 +332,11 @@ This rests on five shots, not a law; verify each one by sampling frames at the l
 language verdict to a human. Where a face still speaks, the fallback is the local push-in over the keyframe.
 
 Put prompts in files rather than inline shell arguments. Long non-ASCII prompt text gets mangled by shell escaping.
+
+Two prompt languages means two copies of every standing block. The unbroken-take sentence, the style lock and the
+no-text clause each exist as an asset block in one fixed English rendering and one fixed Chinese rendering; the
+builder picks the copy by the prompt's language, and "byte-identical" means identical among prompts of the same
+language. Never translate a block ad hoc inside a shot prompt.
 
 **When the story makes two characters identical, design the difference yourself — twice over.** A plot that
 turns one character into a copy of another is a continuity disaster on screen: the audience cannot tell who is
@@ -505,7 +523,7 @@ What the two verified 2026-09-11 routes taught:
   some DNS servers, UDP, or a provider's storage domain may be unreachable. Test it from the user's network before a
   round depends on it.
 
-For a temporary static host, prefer one whose static transfer is not metered; Firebase preview channels also work and carry a native expiry, but read the quota note below first. Use a **new, dedicated** channel or preview deployment for each round rather than reusing an earlier round's — prior job records still cite those URLs, and overwriting them destroys that evidence.
+For a temporary static host, prefer one whose static transfer is not metered; Firebase preview channels also work and carry a native expiry, but read the quota note below first. Every upload goes to a **new, dedicated** channel or preview deployment; never redeploy over an address that a job record already cites, because overwriting it destroys that evidence. A later round may keep *reading* an earlier round's deployment unchanged, re-verifying the hashes once at the start of the round (see *Hosting reuse across rounds*).
 
 Before hosting, build the upload directory and scan it: API key strings, generic credential patterns, and image metadata for paths, prompt text or identity. Images from some generators embed a C2PA provenance manifest and an invisible watermark; harmless for internal tests, but disclose it, and think twice before reusing such images in public deliverables.
 
@@ -543,7 +561,7 @@ After hosting, anonymously GET every URL and compare SHA-256 against local, then
 
 ### 5. Submit and assemble
 
-Submit one task per shot. Persist a job record **before** the POST so an interrupted submit is recoverable and never silently re-fires. Poll by the returned video id.
+Submit one task per shot, or one per scripted multi-shot sequence (see *Scripted multi-shot sequences*). Persist a job record **before** the POST so an interrupted submit is recoverable and never silently re-fires. Poll by the returned video id.
 
 **Classify every failure by its persisted state before retrying anything.** A batch that comes back half-failed
 contains at least three different situations that look identical in a summary line and need opposite handling.
@@ -822,6 +840,15 @@ screen does not speak while the line is narrated over them. Keyword matching on 
 catch it, and it is worth doing because the failure is silent — the clip looks fine until someone notices the
 mouth is moving to words the character is not saying.
 
+**This inversion only holds when the narration is not generated by the video model.** The line goes to a
+text-to-speech track laid in assembly, and the video prompt is a *no-dialogue* prompt (Chinese, structured sound
+section, voice slot 无台词) that never contains the line. Asking the video model itself to produce off-screen
+narration over a visible face works in a probe and fails in production — the model finds a mouth for the audio
+(see *Verified Capability Notes*). If the narration must come from the video model, give it a visible speaker
+instead. The single exception is a voiceover shot with no face in frame, which may carry the line in
+`reference` mode with a pinned voice sample (see *Verified Capability Notes*); a composer must refuse to put a
+spoken line into the video prompt of any voiceover shot that has a face in it.
+
 ### Generated line hygiene can be checked, not just hoped for
 
 The mispronunciation table earlier in this file was learned one re-roll at a time. Most of it is mechanical, so
@@ -986,7 +1013,7 @@ A 12-shot mooncake-history short was first built around a real person as on-came
 
 The presenter version passed every gate — identity card, stress test, face probe — and the owner still judged the finished cut incoherent. Four causes, and none of them is fixed by a better prompt:
 
-- **One voice per clip.** A video model with no voice id casts a slightly different speaker in every clip; six speaking shots were six people.
+- **One voice per clip.** A video model with no voice id casts a slightly different speaker in every clip; six speaking shots were six people, with a full voice bible in every prompt — the bible narrows the drift (nine clips held on an earlier film) but does not pin it.
 - **The face drifts exactly where the shot is hard.** Ordinary shots held; a single clip asked to orbit *and* change era *and* change costume came back as a different man, and reference mode drifted the face again.
 - **A costume change mid-episode** makes the audience re-identify the presenter, on top of jumping between five locations.
 - **The presenter interrupts the story.** Legend and evidence already have pictures; a person stepping in every few seconds to say one line pauses them.
@@ -997,15 +1024,15 @@ Default to no presenter for explainers. Keep the identity assets — they cost n
 
 Generate the picture and the voice separately, and mix locally:
 
-- **Picture**: every clip is generated as a *no-dialogue* shot (Chinese prompt, structured sound section, fixed expressions). Nothing on screen ever has to lip-sync, so the stolen-mouth failure cannot occur.
+- **Picture**: every clip is generated as a *no-dialogue* shot (Chinese prompt, structured sound section, fixed expressions). Nothing on screen ever has to lip-sync, so the stolen-mouth failure is far less likely — still check mouths at the loudest moments, since a face on screen with audio under it is exactly the condition the model exploits.
 - **Voice**: a TTS API returns one file per line, with a chosen voice id, fixed across the whole film. Line length is known before the shot list is finalised, so shot durations are planned from the audio rather than negotiated with the video model.
 - **Cost of a rewrite** drops to a few hundred characters of TTS instead of a regenerated clip, and subtitles are burned from the script itself, with speech recognition kept only as a tripwire.
 
-Measured on one vendor (MiniMax `t2a_v2`, 2026-09-23): 303 system voices (45 Mandarin, 6 Cantonese, the rest across a dozen languages), six models, eight emotion values, speed/volume/pitch, mp3 or wav. Two vendor limits worth writing down: **48 kHz was rejected** (32 kHz accepted), and **voice cloning was forbidden on the account** while "design a voice from a description" worked. Treat these as one dated observation, not a guarantee.
+Measured on one vendor (MiniMax `t2a_v2`, 2026-09-23): 303 system voices (45 Mandarin, 6 Cantonese, the rest across a dozen languages), six models, eight emotion values, speed/volume/pitch, mp3 or wav. Two vendor limits worth writing down: **48 kHz was rejected** (32 kHz accepted), and **voice cloning, voice design ("design a voice from a description") and music generation were all unavailable on this account** (forbidden, plan not supported, or closed to new users — see *Voice* under the 31-shot pilot below); only the system voices worked. Treat these as one dated observation, not a guarantee.
 
 ### Two audio-editing rules that cost a re-render each
 
-- **Speech-recognition word times are a tripwire, not an edit point.** Cutting narration at the reported end of the last word clipped 「…今天这样的」; the reported end ran early. Take the head from the first word minus a margin and keep everything to the end of the file.
+- **Speech-recognition word times are a tripwire, not an edit point.** Cutting narration at the reported end of the last word clipped 「…今天这样的」; the reported end ran early. Trim the head by silence detection (next point), and keep everything to the end of the file. This is the rule for a TTS narration file, which is kept whole. A model-generated dialogue clip is different: there the word times *locate* the line inside the clip (see *Trimming every clip from its first frame*), and the cut still lands a beat outside them, never on a word time.
 - **Never silence-trim the tail of a narration line.** An unstressed final particle sits below a -45 dB threshold and gets eaten. The same lesson in reverse: trimming the head by the recogniser's first-word time ate 「所以」 at the start of a line; trim the head by silence detection instead.
 - **Leave the last word clear of the next transition.** A crossfade over the tail fades the final syllable out even when the audio is intact; pad each segment so speech ends at least ~0.9 s before the join.
 
@@ -1107,7 +1134,9 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 
 - Source identity confirmed from raw content, not a summary.
 - Character sheet and voice sheet quoted verbatim in every prompt that uses them — never paraphrased.
-- Voiceover shots forbid lip movement instead of demanding a visible mouth.
+- Voiceover shots forbid lip movement instead of demanding a visible mouth, carry no spoken line in the video
+  prompt, and take their narration from a separately synthesized track — never from the video model — unless the
+  frame holds no face, in which case the line goes in `reference` mode with a pinned voice sample.
 - A model-proposed shot list was reviewed as a draft and applied through the ordinary validated save.
 - Every long-running step shows progress; no step leaves the operator guessing whether it is working.
 - For a long work: length and chapter gaps measured, cast counted from the text, character bible written by stage
@@ -1131,7 +1160,8 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - Before/after state comparisons taken with identical commands, and each call's success asserted before its
   body was read as state.
 - Any automated detector used as evidence shown to stay quiet on known-clean input.
-- Every video prompt opens with the unbroken-take wording; every source clip scanned for internal cuts.
+- Every single-shot video prompt opens with the unbroken-take wording, in the prompt's own language from its asset
+  block; a scripted sequence replaces it with its cut plan; every source clip scanned for internal cuts.
 - In and out points chosen per clip from its speech window or action, recorded in an edit decision file.
 - Final cut: expected duration, resolution, fps, audio stream present; peak level checked for clipping; no
   letterbox bars; shot changes only at planned boundaries; every dialogue window transcribed and whole.
@@ -1146,7 +1176,7 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
   loudest moments; every shot's language verdict came from a human ear.
 - Card sets internally consistent (same garment, hair and ornaments in every view) before any stress test.
 - Unverified claims recorded as unverified.
-- Every video prompt of a stylised film carries the style-lock sentence, byte-identical; per-second contact sheets
+- Every video prompt of a stylised film carries the style-lock sentence, byte-identical within each prompt language; per-second contact sheets
   compared against the keyframe.
 - The `VOICE:` block hashed across every submitted prompt of the project; any stale copy found and replaced.
 - Every regenerated dialogue clip re-listened, including lines approved in an earlier round.
@@ -1276,8 +1306,10 @@ minute. The driver returns as soon as the file is complete and stable, well befo
 no child running. A file that is still growing must not be mistaken for a finished one.
 
 **T26 — A voiceover shot inverts the mouth instruction.** A shot whose staging says narration / back to camera
-produces an image prompt that forbids lip movement and a video prompt that says the person on screen does not
-speak — while the line itself is still narrated.
+produces an image prompt that forbids lip movement and a no-dialogue video prompt that says the person on screen
+does not speak — while the line itself is narrated from a separate TTS track laid in assembly.
+*Fail:* putting the line into the video prompt of a shot with a face in it and asking the video model to narrate
+it off-screen. (A faceless voiceover shot may carry the line in `reference` mode with a voice sample.)
 
 **T27 — A draft cannot corrupt the project.** A generated shot list that references a scene which does not
 exist is refused at apply time with the offending shot named, and the project files are left byte-identical.
@@ -1399,9 +1431,12 @@ clip loses its whole line to a 3-second trim, and the master ships with one word
 it — the file probes clean, and a pre-production TTS timing gate says nothing about when the *video model* chooses
 to speak.
 
-**Choose each clip's in and out points from its content.** For a dialogue clip, find the speech window (a silence
-detector gives the bursts; word timestamps from a local speech recognizer give the order), start a beat before it and
-end a beat after it. For an action clip, look at frames across time and keep the stretch where the action reads and
+**Default to the whole clip; trim only when something forces it.** The user judged 4–5 s clips trimmed to 1–3 s
+choppy and chose every clip whole (2026-09-24); trim when an internal cut, a drifting tail or a fixed slot (a
+narration line, a title card) forces it. **Then choose the in and out points from the clip's content.** For a
+dialogue clip, find the speech window (a silence detector gives the bursts; word timestamps from a local speech
+recognizer give the order — they locate the line, and can run early, so the cut lands a beat outside them, never on
+them), start a beat before it and end a beat after it. For an action clip, look at frames across time and keep the stretch where the action reads and
 no internal cut intrudes. Record the chosen points per shot in an edit decision file with a one-line reason, so a
 re-edit is a data change. Let dialogue audio lead or trail the picture (J- and L-cuts) when the picture must cut
 before the line ends. Then verify the master, not the clips: transcribe each dialogue window of the finished cut and
