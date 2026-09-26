@@ -124,9 +124,8 @@ one paid image) surfaced three limits in one attempt, all of which apply to any 
 2. **Hosting is its own approval.** Uploading images to a public URL is a deploy action, separate from approving the images themselves. Ask for it separately.
 3. **Approval does not widen.** "Go ahead" authorizes the actions you just described. A rerun, an extra shot, or one more billable task needs a new ask.
 4. **Verify the source.** A fetched summary can be wrong about basic facts, including which chapter it is describing. Read the raw content before designing anything on top of it.
-5. **Write original dialogue.** Borrow scene structure, not sentences. Do not reproduce a source work's prose in prompts or output.
-6. **The agent cannot hear.** Audio envelope and lip-shape analysis prove *something is being spoken*; they never prove the language or the lines are correct. That verdict belongs to a human, and until it arrives the result stays recorded as unverified.
-7. **Never state billing you did not check.** Say it is an assumption, and say so explicitly.
+5. **The agent cannot hear.** Audio envelope and lip-shape analysis prove *something is being spoken*; they never prove the language or the lines are correct. That verdict belongs to a human, and until it arrives the result stays recorded as unverified.
+6. **Never state billing you did not check.** Say it is an assumption, and say so explicitly.
 
 ## Workflow
 
@@ -167,8 +166,6 @@ A single scene needs only the source check in gate 1. A whole novel needs a pre-
 output is what every later gate draws on: who is in which part of the book, what each of them looks like at each
 stage, and which chapters become which episode.
 
-- **Work copy, not archive.** Fetch the text only to read it. Keep it in a scratch directory; commit the analysis
-  — summaries, counts, chapter references — never the text. Hard rule 5 applies to notes as much as to prompts.
 - **Measure before planning.** Total length, per chapter, per volume, and **gaps**: one 509,000-character novel
   (2026-09-11) turned out to be missing two chapters at its source, which would have left two episodes with a hole
   in the plot. Find them before splitting episodes, not after.
@@ -198,7 +195,7 @@ stage, and which chapters become which episode.
 
 Fetch the real source text and verify its identity from the raw content, not a summary. Pick a beat that fits the runtime and, for a dialogue test, one that carries short punchy lines.
 
-Present a shot table: shot, duration, visual, dialogue line, speaker. State plainly that the dialogue is original. Ask for art direction and the audio route up front, since both change every downstream prompt.
+Present a shot table: shot, duration, visual, dialogue line, speaker. Ask for art direction and the audio route up front, since both change every downstream prompt.
 
 #### Story shape and shot mix, for a film meant to be watched (from one reference, 2026-09-23)
 
@@ -561,7 +558,7 @@ After hosting, anonymously GET every URL and compare SHA-256 against local, then
 
 ### 5. Submit and assemble
 
-Submit one task per shot, or one per scripted multi-shot sequence (see *Scripted multi-shot sequences*). Persist a job record **before** the POST so an interrupted submit is recoverable and never silently re-fires. Poll by the returned video id.
+Submit one task per scripted multi-shot sequence for a continuous beat (the default — see *Scripted multi-shot sequences*), or one per shot where a shot must stand alone. Persist a job record **before** the POST so an interrupted submit is recoverable and never silently re-fires. Poll by the returned video id.
 
 **Classify every failure by its persisted state before retrying anything.** A batch that comes back half-failed
 contains at least three different situations that look identical in a summary line and need opposite handling.
@@ -967,8 +964,9 @@ is weak counter-evidence to that rule, not a reason to drop it.
 
 ### When to use which
 
-Use a scripted sequence for **one continuous beat in one place** — a conversation, a reveal, a walk. Keep one clip per
-shot where a single shot must be redone alone (a sequence is regenerated whole), where the keyframe must govern
+**Default (the user, 2026-09-26): cuts are scripted, never left to the model.** A scripted sequence is the default for
+**one continuous beat in one place** — a conversation, a reveal, a walk — with every cut given its second; a cut the
+model adds on its own stays a defect to trim or regenerate. Keep one clip per shot where a single shot must be redone alone (a sequence is regenerated whole), where the keyframe must govern
 every shot (only shot 1 has a first frame; later shots carry identity by text), and for every shot that needs the
 unbroken take. Sequences are capped by the 12-second clip limit; a beat that needs more is two sequences.
 
@@ -1140,7 +1138,7 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - A model-proposed shot list was reviewed as a draft and applied through the ordinary validated save.
 - Every long-running step shows progress; no step leaves the operator guessing whether it is working.
 - For a long work: length and chapter gaps measured, cast counted from the text, character bible written by stage
-  with each line tagged stated or inferred and cited; no source text committed.
+  with each line tagged stated or inferred and cited.
 - Blocking exists before any shot prompt: every actor and camera placed, every shot citing a camera.
 - Root-structure signatures compared; no two shots sharing a recurring setup have matching signatures.
 - Character cards built on neutral grey, one per state; no scene frame used as an identity reference.
