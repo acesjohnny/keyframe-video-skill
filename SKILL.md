@@ -331,7 +331,7 @@ an unstoppable anecdote" while the shot says he is silent produces gibberish, th
 This rests on five shots, not a law; verify each one by sampling frames at the loudest audio moments and hand the
 language verdict to a human. Where a face still speaks, the fallback is the local push-in over the keyframe.
 
-Put prompts in files rather than inline shell arguments. Long non-ASCII prompt text gets mangled by shell escaping.
+Put prompts in files rather than inline shell arguments. Long non-ASCII prompt text gets mangled by shell escaping. **Keep every prompt file as Markdown (`.md`), never `.txt`** — keyframe, card, video and review copies alike — and have every builder, manifest and queue write and cite the `.md` path, so a person can open and edit the prompts in a notes app. The text sent to the model is unchanged.
 
 Two prompt languages means two copies of every standing block. The unbroken-take sentence, the style lock and the
 no-text clause each exist as an asset block in one fixed English rendering and one fixed Chinese rendering; the
@@ -997,6 +997,25 @@ not a law — re-confirm on the first real round.
   `video_queue_full`. Its billing endpoint reported a payment method and an open limit, yet a non-flash submission
   was refused with `insufficient_user_quota, remaining $0.000000`. Only a submission tells you the balance; the
   OpenAI-compatible billing endpoints return boilerplate.
+- **A long queue run is a dispatcher, not a loop you babysit** (2026-09-26/28, three films, about 150 clips). One sender
+  walks an ordered queue file, 61 s between POSTs; on `video_queue_full` or HTTP 429 it archives the refused record and
+  tries again every 61 s for up to 48 hours. While it waits it still polls, so finished clips download instead of
+  sitting on the server. Every record that holds a video id is polled only, never resubmitted.
+- **Network failures are retries, not stops.** A connect timeout (`[Errno 60] Operation timed out`), no route, refused
+  connection or DNS failure means the request never reached the API, so treat it like a full queue. One unclassified
+  timeout stopped a dispatcher for 50 minutes on a night the queue was moving. Only a failure after the request was
+  sent can leave a task you do not know about.
+- **You cannot ask the API what you submitted.** `GET /v1/videos` returns `Invalid URL`, so a submission whose outcome is
+  uncertain cannot be reconciled with the server. The error class is all you have: decide from it, and accept that a
+  post-send failure may cost one duplicate.
+- **A server-side `failed` gets one automatic resubmit.** Two clips failed on the server with nothing to download (one
+  after 7 minutes, one after 49). Archive the failed record and resubmit the same prompt once; both reruns succeeded.
+  If the same clip fails twice, stop and ask. A single-pass dispatcher has already walked past the failed item, so the
+  resubmit needs another pass — queue it behind the current one rather than running two senders.
+- **Measured shape of a day** (local time, UTC+8, 2026-09-28): 08:00–10:00 six clips in, about one per 20 minutes;
+  10:00–12:00 four; 12:00–14:00 two; 14:00–16:00 one; 16:00–19:00 none; then three between 19:00 and 19:20. The
+  previous night a 38-clip film went through between midnight and morning. Plan daytime for review and assembly, and
+  let the queue run overnight.
 
 ### A detector that never fires is not evidence either
 
@@ -1127,6 +1146,80 @@ neutral pose).
   filter.
 - **Licensed stock music** needs its source page, author and licence recorded next to the file.
 
+## Lessons from a children's read-along series (2026-09-26/28)
+
+Three short leveled readers for a young English learner, each made into two films: a one-minute vocabulary film and
+a six-minute read-along of the whole text. About 150 clips, one narrator, eight characters, all from watercolour
+keyframes. What held:
+
+### Two films per text, not one
+
+Keep the vocabulary film and the read-along as separate films. The reader watches the vocabulary film first, pausing
+to repeat each word, and can rewatch either on its own; a combined film makes both harder to reuse.
+
+- **Read-along units.** Split the text into units of one to three sentences, each tagged with its speaker: narrator,
+  a named character, a group, or silent. The narrator's units have no face in frame and carry the line in `reference`
+  mode with the pinned narrator sample. A character's line is a `keyframe` shot with the face and mouth visible. A
+  silent reaction shot uses the Chinese prompt with the voice slot `人声：无台词`.
+- **Mix.** Normalize speech units to -16 LUFS and silent reaction shots to about -30 LUFS, so their ambience does not
+  jump out. Trim a tail that carries noise after the last word, with a short fade.
+- **Vocabulary units.** Each unit is "Word. Word. One plain definition sentence.", in `reference` mode with the
+  narrator sample and a picture that shows the word. Seconds are about words ÷ 1.8 + 2.3, clamped to 5–12.
+- **A word that needs a face.** A faceless narration shot cannot show a scowl. Keep the narration clip for its sound,
+  and replace its picture locally with a slow push-in on the story keyframe that shows the face (zoompan at 2× scale,
+  centred; see *A local push-in that sticks to the top-left corner*).
+
+### Audition a voice before the batch
+
+Before submitting a character's lines, audition two variants of its voice description on one short line (a, b). The
+user picks by ear, and the chosen description goes verbatim into every shot of that character; for minor characters
+one audition each is enough. For the narrator, the audition clip the user picks becomes the pinned `<Audio 1>` sample.
+After the batch, the user compares two clips of the same character by ear. The agent cannot hear, and must not claim
+that a voice is consistent.
+
+### Deliverables: a clean master and sidecar subtitles
+
+- **Default package.** The master carries no subtitles, and next to it sit three ASS files with the same base name:
+  `<name>.en.ass` (English only), `<name>.zh-Hans.ass` (English with Simplified Chinese) and `<name>.zh-Hant.ass`
+  (English with Traditional Chinese). Players that auto-load sidecar subtitles show them as three tracks. Put an SRT
+  copy of each in `srt/` for players without ASS.
+- **Burned versions on request.** Burn the chosen ASS into the picture at normal speed first, and only then change
+  speed (`setpts=PTS/k`, `atempo=k`). Burning after a speed change puts every karaoke highlight and word card out of
+  sync. Keep the audio stream as it is when the speed does not change.
+- **The English-only track.** Drop the Chinese line entirely and lower the English line to the bottom margin, instead
+  of leaving an empty Chinese row.
+
+### Subtitle text comes from the source, timing from ASR
+
+- **What is shown.** The subtitles show the source text word for word. ASR is used only for word timings: align its
+  words to the source words with a sequence matcher, take each matched word's start and end, and interpolate any word
+  ASR missed between its neighbours.
+- **Chinese lines break only at punctuation.** When a Chinese line would wrap mid-word, rewrite the sentence so that
+  the break falls on a comma or full stop, rather than letting the renderer split a word.
+- **Converting Traditional to Simplified.** OpenCC `hk2s` output needs `甚么` replaced with `什么`. Use `s2hk` on the
+  Traditional text only as a check, deciding each suggestion one by one: for example, accept 閲, 説 and 温, and reject
+  瞭 and 劃.
+
+### Checking the clips by ear-proxy
+
+- **One file per transcription call.** Transcribe every clip before assembly, with word timestamps. Run
+  `mlx-whisper` from a throwaway environment (`uv run --python 3.12 --with mlx-whisper`) and loop over the files inside
+  one Python process: its CLI, given several files at once, wrote transcripts to the wrong outputs.
+- **What ASR flagged.** Three clips out of 38: a tail with noise after the line (trimmed), laughter heard as words,
+  and near-silence heard as a sentence. None needed a rerun. A garbled vocabulary clip ("bait bait the babe bait
+  aid…") did, and its rerun transcribed word for word.
+
+### Tools that bit
+
+- **Subtitle burning needs libass.** Homebrew's default `ffmpeg` has no `subtitles` filter. `ffmpeg-full` has it but is
+  keg-only, so call it by its full path (`/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg`).
+- **Installing it broke other tools.** Installing `ffmpeg-full` upgraded shared libraries (`x265`, `simdutf`), which
+  broke the default `ffmpeg` and `node` until `brew upgrade` ran. After any Homebrew install, run `--version` on every
+  tool the pipeline uses.
+- **The image subscription runs out mid-series.** It has a weekly window, and this series hit its limit twice.
+  Count the keyframes and cards before a round, keep a budget for redos, and when the quota is low, rerun only the
+  frames the user rejects.
+
 ## Round Isolation
 
 A second run must not overwrite the first. Scripts that hardcode a single `output/` directory will clobber prior clips, job records and masters. Give every round its own subtree and its own shot definitions, and verify the no-argument path still behaves exactly as the first round did.
@@ -1140,6 +1233,9 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
   frame holds no face, in which case the line goes in `reference` mode with a pinned voice sample.
 - A model-proposed shot list was reviewed as a draft and applied through the ordinary validated save.
 - Every long-running step shows progress; no step leaves the operator guessing whether it is working.
+- A read-along or teaching film ships as a clean master plus same-named sidecar subtitles (English, English + Simplified,
+  English + Traditional); any burned or speed-changed version was burned at normal speed before the speed change.
+- Every spoken clip was transcribed one file per call before assembly, and subtitles show the source text, not ASR.
 - For a long work: length and chapter gaps measured, cast counted from the text, character bible written by stage
   with each line tagged stated or inferred and cited.
 - Blocking exists before any shot prompt: every actor and camera placed, every shot citing a camera.
