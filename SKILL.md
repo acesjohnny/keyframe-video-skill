@@ -1244,6 +1244,15 @@ ASR matched all 47 lines of one read-along, yet the user heard eight faults and 
   a reshoot, search every film for clips built from that frame. Where only the picture was wrong, keep the approved
   narration and lay the reshot clip under it, holding its last frame to the end; no new generation is needed. If the
   on-screen word card now covers the subject, move that card.
+- **Clicks also hide in the pauses inside a clip, and ducking the pauses is not the fix.** After the join fix, the
+  user still heard "t" sounds after a word and before the first word of a clip. The video model had added short
+  effect-like bursts in the pauses. Ducking everything outside the words by 24 dB (ASR word times, 30 ms ramps) measured
+  clean, but the user found it plainly unpleasant: the room tone switching on and off is audible. What was accepted:
+  keep the clips' natural sound, mute only a burst that ASR folded into a word end, and lay quiet instrumental music
+  under the whole film (fixed gain, not compressed, about 19 dB under the speech; -35 LUFS for music against a -16 LUFS
+  film). The music masks the remaining pause noise. Change tracks at a story turn with a 3 s crossfade, loop a short
+  track with 2 s crossfades, and record each track's source page and licence next to the file. A whole-film
+  transcript can also invent a sentence over near-silence (-60 dB): check the level before treating it as a fault.
 - **Silent shots: attenuate only, never boost.** Normalizing near-silent reaction shots up to -30 LUFS raised faint
   giggles into audibility, laughter in a sad shot. Measure the loudness and apply only a negative gain.
 - **A pronunciation hint belongs in the voice paragraph, not the line.** To fix a mispronounced name, the rerun adds
