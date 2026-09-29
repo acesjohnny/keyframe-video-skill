@@ -1188,6 +1188,13 @@ that a voice is consistent.
   sync. Keep the audio stream as it is when the speed does not change.
 - **The English-only track.** Drop the Chinese line entirely and lower the English line to the bottom margin, instead
   of leaving an empty Chinese row.
+- **One line of English and one line of Chinese** (2026-09-29). Two or more lines of each covered most of the
+  picture. Split a long cue over time with its word timings: prefer breaks after punctuation or before a joining
+  word, never leave a function word, possessive or adjective at a line end, and weigh balance so no chunk is two words.
+  Split the Chinese at punctuation into matching pieces, each short enough for one line; if the Chinese needs more
+  pieces than the English has chunks, split the English into as many, so two Chinese lines never show at once. Never
+  leave a lone "Word：" as a Chinese piece. When a Chinese sentence is too long and has no punctuation, rewrite it
+  with a comma rather than cutting it mid-word.
 
 ### Subtitle text comes from the source, timing from ASR
 
@@ -1209,6 +1216,40 @@ that a voice is consistent.
   and near-silence heard as a sentence. None needed a rerun. A garbled vocabulary clip ("bait bait the babe bait
   aid…") did, and its rerun transcribed word for word.
 
+### What the listener caught after ASR passed (2026-09-29)
+
+ASR matched all 47 lines of one read-along, yet the user heard eight faults and saw two. Each had a pattern:
+
+- **Clicks at every join came from the concatenation, not the voice.** Concatenating AAC parts with `-c copy`
+  produced short "t"/"k" pops at segment boundaries; a ±30 ms window around the joins measured -9 to +1 dB. Give
+  every part a 20 ms fade-in and an 80 ms fade-out, and re-encode the audio once at the concat; afterwards every join
+  measured under -41 dB. Measure the joins before delivery (`astats` on a 60 ms window at each boundary); a quiet
+  film's worst join should be far below speech level.
+- **A near-miss on a name is a mispronunciation.** ASR heard "Jonan" for "Jonah"; the match ratio passed (0.91) and
+  the difference was waved off as recognition noise. The narrator really said "Jonen". For names, any token
+  mismatch fails the clip until someone listens.
+- **ASR can swallow a repeat.** A narrator said "at the party, the party, Toby…" and a false start "one child… t… one
+  child tripped". ASR dropped the repeated words and kept a clean sentence, leaving only a gap in the word timings.
+  Flag any gap over about one second between words inside a sentence, and transcribe that gap on its own.
+- **A repeat inside a clip can be cut instead of rerun.** Remove the span on both streams
+  (`select`/`aselect` with `not(between(t,a,b))`, then `setpts`/`asetpts`), placing a and b inside the pauses from
+  `silencedetect`. Transcribe the removed span to prove it held the repeat and nothing else. The picture jumps
+  slightly at the cut, which is acceptable only in a shot with little motion.
+- **"Seen from behind" breaks a front-printed costume and invites a twisted head.** A faceless narration shot "seen
+  from behind" the boy moved his shirt's front print onto his back. A group "seen from behind" with the boy facing
+  them turned his head 180° over his shoulders. For a faceless shot where the front matters, frame the character
+  from the front and crop at the chin: "the top edge of the picture cuts across just below his chin". Also say that
+  every head faces the same way as its body.
+- **A reshot story frame has dependants.** The vocabulary film had reused the rejected picture for one word. After
+  a reshoot, search every film for clips built from that frame. Where only the picture was wrong, keep the approved
+  narration and lay the reshot clip under it, holding its last frame to the end; no new generation is needed. If the
+  on-screen word card now covers the subject, move that card.
+- **Silent shots: attenuate only, never boost.** Normalizing near-silent reaction shots up to -30 LUFS raised faint
+  giggles into audibility, laughter in a sad shot. Measure the loudness and apply only a negative gain.
+- **A pronunciation hint belongs in the voice paragraph, not the line.** To fix a mispronounced name, the rerun adds
+  "She pronounces the boy's name Jonah clearly as JOH-nuh, two syllables" to the voice description and leaves the
+  narration text unchanged. On the one rerun so far, ASR heard "Jonah" exactly; treat that as one sample, not a rule.
+
 ### Tools that bit
 
 - **Subtitle burning needs libass.** Homebrew's default `ffmpeg` has no `subtitles` filter. `ffmpeg-full` has it but is
@@ -1216,6 +1257,13 @@ that a voice is consistent.
 - **Installing it broke other tools.** Installing `ffmpeg-full` upgraded shared libraries (`x265`, `simdutf`), which
   broke the default `ffmpeg` and `node` until `brew upgrade` ran. After any Homebrew install, run `--version` on every
   tool the pipeline uses.
+- **`ffmpeg` in a shell loop swallows the loop's input.** Inside `while read …; do ffmpeg …; done < list`, ffmpeg read
+  the rest of the list from stdin and the loop skipped items. Pass `-nostdin`. The default build also lacks
+  `drawtext`; label contact sheets with `ffmpeg-full` or an image library.
+- **Deleting a hosting deployment is not instant unpublishing.** After a Cloudflare Pages preview deployment was
+  deleted, and the API confirmed it no longer existed, one of its files still downloaded for more than 20 minutes
+  while the others returned 404; a second deployment deleted the next day still served both of its files right afterwards. Never host anything you would need to recall at once. Keep a local copy of any
+  pinned voice sample: reruns need it re-hosted after cleanup.
 - **The image subscription runs out mid-series.** It has a weekly window, and this series hit its limit twice.
   Count the keyframes and cards before a round, keep a budget for redos, and when the quota is low, rerun only the
   frames the user rejects.
@@ -1236,6 +1284,8 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - A read-along or teaching film ships as a clean master plus same-named sidecar subtitles (English, English + Simplified,
   English + Traditional); any burned or speed-changed version was burned at normal speed before the speed change.
 - Every spoken clip was transcribed one file per call before assembly, and subtitles show the source text, not ASR.
+- Every join in an assembled film was measured and none pops; every name in the ASR matches exactly; any in-sentence
+  word gap over about one second was transcribed on its own.
 - For a long work: length and chapter gaps measured, cast counted from the text, character bible written by stage
   with each line tagged stated or inferred and cited.
 - Blocking exists before any shot prompt: every actor and camera placed, every shot citing a camera.
