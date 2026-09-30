@@ -8,6 +8,8 @@ An [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) 
 
 The workflow applies to any keyframe-driven video model. It was written and verified against the Agnes video API (`agnes-video-2.5-flash`).
 
+> **Built in real production, not written for a demo.** Every rule in this skill came out of a failure or a fix in actual work. As of 30 September 2026 it has driven about **20 real video productions** — children's English read-along films with vocabulary shorts, narrated lesson series, dialogue scenes, and a 31-shot replication of a film's opening — adding up to **more than 540 video-generation tasks** and about **570 finished clips**. Where a finding rests on a single observation, the skill says so.
+
 https://github.com/user-attachments/assets/033e52ba-caad-4a17-a287-36918fba43c4
 
 <p align="center"><sub>A 15-second, three-shot sample with spoken Mandarin, made with this workflow. Source file: <a href="examples/tangbao-hatches/tangbao-hatches.mp4">tangbao-hatches.mp4</a></sub></p>
