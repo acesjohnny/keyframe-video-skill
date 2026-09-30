@@ -21,6 +21,8 @@ https://github.com/user-attachments/assets/033e52ba-caad-4a17-a287-36918fba43c4
 - **先审批，后花钱。** 分镜、调度、提示词、角色卡、关键帧、托管，每一步都停下来等人批准——批准的是方案，而不是花完钱之后拿到一段不想要的成品再来评价。
 - **连续性靠结构保证。** 角色设定由脚本拼进每一条提示词，从不手抄；身份参考用中性灰底的角色卡，并在片子依赖它之前做压力测试；每个镜头里有谁，由摄影机的视野算出来，而不是靠记忆。
 - **诚实的验证。** Agent 听不见声音。这个 skill 只拿「确实有人在说话」的客观证据，绝不把它当成「说的语言和台词正确」的结论；检查贯穿整条片段的多个时间点，而不是一两帧；任何自动检测器都要先在已知干净的样本上验证，才能相信它。
+- **声线稳得住。** 旁白的声音靠 `reference` 模式挂一段已通过的声音样本锁定；每个角色的声音先让人耳试听选定一次，再把选中的声音描述原样写进这个角色的每一个镜头。
+- **无人值守也能跑完。** 一个调度器按顺序、每 61 秒提交一次；遇到队列满或断网就重试，最多挂 48 小时；已经拿到任务号的绝不重复提交，等待期间照常下载——长片可以整夜自己跑完。
 - **把真正耗过时间的坑写下来**——没有台词的镜头自己编出一句套话、空镜里冒出对着镜头讲话的主持人、重试被自己的防重复提交机制挡回、验证命令的报错被读成「全部被删了」。
 
 ## 工作流程
@@ -61,7 +63,7 @@ flowchart LR
 
 **任何 Agent 都能用。** 这个 skill 本身就是 Markdown 文档加一套约定。只要 Agent 能读文件、跑命令行、发 HTTP 请求，就能照着做——[Claude Code](https://code.claude.com/docs/en/overview)、[Codex](https://github.com/openai/codex)、[Hermes Agent](https://github.com/NousResearch/hermes-agent)，或者你自己的 Agent 都可以。
 
-**视频模型：用 [`agnes-video-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-video-25-flash) 验证。** 本仓库里的每一条规则都是在它上面实测出来的，用的是首帧（keyframe）模式、720p。注册和创建 API Key：**[platform.agnes-ai.com](https://platform.agnes-ai.com)**。按 2026 年 9 月 11 日查看的[官方价目页](https://wiki.agnes-ai.com/en/docs/pricing)，`agnes-video-2.5-flash` **目前限时免费**（原价 720p 视频每秒 $0.025）；不带「Flash」的 `agnes-video-2.5` 是收费的。优惠会结束，用之前请再看一眼价目页。
+**视频模型：用 [`agnes-video-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-video-25-flash) 验证。** 本仓库里的每一条规则都是在它上面实测出来的，720p，包括首帧（keyframe）模式和挂声音样本的 `reference` 模式。注册和创建 API Key：**[platform.agnes-ai.com](https://platform.agnes-ai.com)**。按 2026 年 9 月 11 日查看的[官方价目页](https://wiki.agnes-ai.com/en/docs/pricing)，`agnes-video-2.5-flash` **目前限时免费**（原价 720p 视频每秒 $0.025）；不带「Flash」的 `agnes-video-2.5` 是收费的。优惠会结束，用之前请再看一眼价目页。
 
 **出图模型：随你选。** 关键帧和角色卡用过 OpenAI 的图像模型，也用过 [`agnes-image-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-image-25-flash)（同一价目页上也是 $0）。其他支持首帧的出图、视频模型，比如 MiniMax 的，也能套用同样的审批关；本仓库没有实测过它们，各家的限制请自行确认。
 
@@ -73,7 +75,7 @@ flowchart LR
 |---|---|---|
 | **Agnes 出图 → Agnes 视频**：`agnes-image-2.5-flash` 直接返回一个图片网址，把这个网址原样交给 `agnes-video-2.5-flash` | 不需要 | ✅ 2026-09-11 实测通过 |
 | **直接传图片数据**：[MiniMax 的视频接口](https://platform.minimax.io/docs/api-reference/video-generation-i2v)首帧可以直接传 Base64 数据 | 不需要 | 📄 仅厂商文档 |
-| **临时静态托管**：Firebase Hosting 预览频道，或对象存储加带时效的签名链接 | 需要 | ✅ Firebase 实测；对象存储未测 |
+| **临时静态托管**：Cloudflare Pages 预览部署（静态流量不计费）、Firebase Hosting 预览频道，或对象存储加带时效的签名链接 | 需要 | ✅ Cloudflare Pages 2026-09-25 实测，此后每部片都用它；Firebase 实测；对象存储未测 |
 | **本机服务器 + 隧道**：在自己电脑上放关键帧，用 [Cloudflare 临时隧道](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/)暴露成公网网址，不用注册 | 需要 | ✅ 2026-09-11 实测通过 |
 
 2026 年 9 月 11 日两次测试的结论：
@@ -81,6 +83,8 @@ flowchart LR
 - **Agnes 出图 → Agnes 视频，完全不用托管就跑通了。** 图片网址不带过期参数，视频做完之后仍能打开；但 Agnes 会保留多久，文档里没写——拿到网址就立刻下载一份存档。
 - **光有本机服务器不够。** Agnes 的服务器看不到你电脑的 `localhost` 或局域网地址，家庭宽带大多也没有公网 IP，所以要用隧道给它一个公网网址。Agnes 在提交任务约 15 秒后来取了一次图。
 - **在你自己的网络里先试一遍。** 第一次测隧道时看起来像是隧道坏了，其实是本机 DNS 解析不出这个刚建的新域名；改用公共 DNS 解析就正常了。尤其是中国大陆的用户，Firebase 和部分公共 DNS 可能访问不了——「全用 Agnes」或「本机服务器 + 隧道」这两条路都用不到托管服务。
+
+自 2026-09-25 起，每部片的关键帧都走 Cloudflare Pages 预览部署：之前一个月的 Firebase 预览频道用光了那个项目每月 10 GB 的免费托管流量。Pages 没有自动过期，片子做完要把预览删掉——而且删掉的部署有时还会继续提供部分文件一段时间。
 
 ## 其中几步长什么样
 
@@ -158,7 +162,7 @@ cp SKILL.md ~/.claude/skills/keyframe-video-production/
 
 ## 来源
 
-提炼自 2026 年 9 月 8 日至 11 日的真实制作：两个简短的技术演示、一部 17 个镜头的儿童成语片，以及改编自小说的两集（18 个和 20 个镜头）。`SKILL.md` 里的每一条规则都记录了是哪一次制作为它付出了代价。关于说话语言的判定一律来自人耳收听，从不来自自动分析。
+提炼自 2026 年 9 月 8 日至 30 日的真实制作——约 20 个项目、540 多个视频生成任务：几个简短的技术演示；一部 17 个镜头的儿童成语片；改编自小说的两集（18 个和 20 个镜头）；一套有旁白的系列课程片；一部电影开场的 31 镜复刻；以及儿童英语跟读片，每篇配一支读前生词短片。`SKILL.md` 里的每一条规则都记录了是哪一次制作为它付出了代价。关于说话语言的判定一律来自人耳收听，从不来自自动分析。
 
 ## 许可
 
