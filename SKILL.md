@@ -1004,7 +1004,9 @@ not a law — re-confirm on the first real round.
 - **Network failures are retries, not stops.** A connect timeout (`[Errno 60] Operation timed out`), no route, refused
   connection or DNS failure means the request never reached the API, so treat it like a full queue. One unclassified
   timeout stopped a dispatcher for 50 minutes on a night the queue was moving. Only a failure after the request was
-  sent can leave a task you do not know about.
+  sent can leave a task you do not know about. A TLS handshake timeout (`_ssl.c: The handshake operation timed out`)
+  is also a connect-stage failure — one stopped a dispatcher for two hours before dawn. The rule is the stage, not the
+  message: any error raised before the request body is sent is retried.
 - **You cannot ask the API what you submitted.** `GET /v1/videos` returns `Invalid URL`, so a submission whose outcome is
   uncertain cannot be reconciled with the server. The error class is all you have: decide from it, and accept that a
   post-send failure may cost one duplicate.
@@ -1015,7 +1017,12 @@ not a law — re-confirm on the first real round.
 - **Measured shape of a day** (local time, UTC+8, 2026-09-28): 08:00–10:00 six clips in, about one per 20 minutes;
   10:00–12:00 four; 12:00–14:00 two; 14:00–16:00 one; 16:00–19:00 none; then three between 19:00 and 19:20. The
   previous night a 38-clip film went through between midnight and morning. Plan daytime for review and assembly, and
-  let the queue run overnight.
+  let the queue run overnight. Treat this as a tendency, not a timetable: two days later the queue stayed full from
+  19:00 past 21:00 with nothing admitted.
+- **Several projects share one sender.** With three films in production, merge their queue files into one ordered
+  list (finish the nearest film first, then every project's auditions, then narration and silent shots) and restart the
+  dispatcher in the pause after a refused attempt. Records that already hold a video id are only polled, so a restart
+  never resubmits. Never run a second sender beside it.
 
 ### A detector that never fires is not evidence either
 
@@ -1259,6 +1266,35 @@ ASR matched all 47 lines of one read-along, yet the user heard eight faults and 
   "She pronounces the boy's name Jonah clearly as JOH-nuh, two syllables" to the voice description and leaves the
   narration text unchanged. On the one rerun so far, ASR heard "Jonah" exactly; treat that as one sample, not a rule.
 
+### A second batch of three stories: what the keyframes taught (2026-09-29/30)
+
+Three more readers, 156 keyframes, 21 character cards. Each fault below was caught at the image gate, before a
+video task was spent on it:
+
+- **Attach the card for every character in the frame, even from behind.** Four bench shots named the teacher in the
+  text but carried no bible paragraph and no card; the model painted a different woman each time. A character who
+  appears at all, even as a small back view, gets the bible text and the full-body card.
+- **A thought or memory bubble must be described as an object in the picture.** "A picture-book memory bubble: two
+  boys arguing" produced a plain scene of two boys. What worked: "A large round white thought bubble with a soft
+  scalloped, cloud-shaped edge floats in the upper part of the picture, with three small white circles trailing down to
+  the bench where [characters] sit, seen from behind. Inside the bubble, drawn smaller and softer like a memory: …"
+  — a physical bubble, a trail of circles and an anchor scene beneath it.
+- **Explanatory frames take no setting paragraph.** A split picture (a hot beach on the left, a snowy street on the
+  right) and a coat forgotten on a hook at home both came out as the school entrance, because the shared setting
+  paragraph described the school. Frames that explain an idea carry only their own description.
+- **Name everyone in the frame.** "Two children stand at the doorway" gave the hero a stranger for a companion.
+- **The face card carries its outfit into other shots.** A face card showing the day-two hoodie put the hoodie into
+  day-one scenes. State the outfit in every shot where it matters ("only his short-sleeved T-shirt — no sweatshirt").
+- **"No borders" is not a guarantee.** One frame in 156 came back inside a black frame; check the edges at review.
+- **Children's content: design modesty at the card stage.** A grandmother in a swimsuit produced body close-ups that
+  were wrong for a ten-year-old audience. Fix the costume in the character bible (here: a high-necked, cap-sleeved
+  one-piece with a little skirt), regenerate both cards, then every shot that shows the character. For faceless
+  narration frames, prefer hands, objects or a full-length figure at a distance over torso close-ups, and avoid
+  bending-over back views.
+- **An accent can be set by description.** "A native Australian English speaker with a clear, natural Australian
+  accent (he says 'G'day, mate' the Australian way), no American accent" gave the chosen voice in one audition pair;
+  ASR heard his "Aus" as "Oss", which is the Australian pronunciation. One sample, not a rule.
+
 ### Tools that bit
 
 - **Subtitle burning needs libass.** Homebrew's default `ffmpeg` has no `subtitles` filter. `ffmpeg-full` has it but is
@@ -1275,7 +1311,12 @@ ASR matched all 47 lines of one read-along, yet the user heard eight faults and 
   pinned voice sample: reruns need it re-hosted after cleanup.
 - **The image subscription runs out mid-series.** It has a weekly window, and this series hit its limit twice.
   Count the keyframes and cards before a round, keep a budget for redos, and when the quota is low, rerun only the
-  frames the user rejects.
+  frames the user rejects. Measured over three days: about 40 images use up one window, and the refusal names the
+  reset time ("try again at 12:54 PM"). Split a round into batches of up to about 40, and on a refusal schedule the
+  resume a few minutes after the named time instead of retrying.
+- **The session scratch folder is wiped on restart.** A transcription helper kept there vanished when the session
+  restarted overnight, and the next QC run silently produced nothing. Keep every helper script in the repository's
+  tools folder, never in a temporary directory.
 
 ## Round Isolation
 
@@ -1295,6 +1336,8 @@ A second run must not overwrite the first. Scripts that hardcode a single `outpu
 - Every spoken clip was transcribed one file per call before assembly, and subtitles show the source text, not ASR.
 - Every join in an assembled film was measured and none pops; every name in the ASR matches exactly; any in-sentence
   word gap over about one second was transcribed on its own.
+- Every character visible in a keyframe, even from behind, had its bible text and card attached; costumes suit the
+  audience before any shot is generated.
 - For a long work: length and chapter gaps measured, cast counted from the text, character bible written by stage
   with each line tagged stated or inferred and cited.
 - Blocking exists before any shot prompt: every actor and camera placed, every shot citing a camera.
