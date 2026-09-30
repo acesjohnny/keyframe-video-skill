@@ -8,6 +8,8 @@
 
 適用於任何以關鍵影格驅動的影片模型；以 Agnes 影片 API（`agnes-video-2.5-flash`）撰寫並驗證。
 
+> **不是示範稿，是在真實製作裡一次次打磨出來的。** 這個 skill 裡的每一條規則，都來自實際做片時踩過的坑或找到的解法：截至 2026 年 9 月 30 日，已經用它跑完約 **20 個真實影片專案**——兒童英語跟讀片和讀前生詞短片、有旁白的系列課程片、帶對白的劇情片段、一部電影開場的 31 鏡復刻——累計 **540 多個影片生成任務**、約 **570 個成品片段**。只觀察到一次的結論，skill 裡都會註明「只是一個樣本」。
+
 https://github.com/user-attachments/assets/033e52ba-caad-4a17-a287-36918fba43c4
 
 <p align="center"><sub>用這套流程製作的 15 秒三鏡頭範例，附普通話對白。原始檔案：<a href="examples/tangbao-hatches/tangbao-hatches.mp4">tangbao-hatches.mp4</a></sub></p>
