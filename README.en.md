@@ -21,6 +21,8 @@ Most of the value is not "how to call a video API". It is the discipline around 
 - **Gates before spend.** Storyboard, blocking, prompts, character cards, keyframes and hosting each stop for approval, so the plan is approved before the money is spent — not a finished clip reviewed after it.
 - **Continuity by construction.** Character bibles are assembled into every prompt by script, never hand-copied. Identity comes from cards on a neutral grey background, stress-tested before the film depends on them. Who is in each shot is computed from camera geometry, not remembered.
 - **Honest verification.** An agent cannot hear. The skill gathers real evidence that speech exists and never lets it pass for a verdict on language or wording; it checks frames across the whole clip, not one; and it tests any automated detector against known-clean input before believing it.
+- **Voices that stay put.** A narrator's voice is pinned by attaching an approved sample in `reference` mode; each character's voice is auditioned by ear once, and the chosen description is then locked into every shot of that character.
+- **Runs that finish unattended.** One dispatcher submits in order with 61-second spacing, retries a full queue or a dropped connection for up to 48 hours, never resubmits a task that already has an id, and downloads while it waits — long films go through overnight without anyone watching.
 - **Failure modes that cost real time, written down** — a no-dialogue shot inventing its own stock line, an empty landscape shot filled by a presenter talking to camera, a retry blocked by its own duplicate-submission guard, a verification command's error payload read as "everything was deleted".
 
 ## The workflow
@@ -61,7 +63,7 @@ The full procedure, verified capability notes, validation checklist, regression 
 
 **Any agent.** The skill is plain Markdown plus conventions. Any agent that can read files, run shell commands and make HTTP calls can follow it — [Claude Code](https://code.claude.com/docs/en/overview), [Codex](https://github.com/openai/codex), [Hermes Agent](https://github.com/NousResearch/hermes-agent), or your own.
 
-**Video model — verified with [`agnes-video-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-video-25-flash).** Every rule in this repository was measured on it, in keyframe (first-frame) mode at 720p. Sign up and create an API key at **[platform.agnes-ai.com](https://platform.agnes-ai.com)**. On the [official price page](https://wiki.agnes-ai.com/en/docs/pricing), checked on 2026-09-11, `agnes-video-2.5-flash` is **free for a limited time** (list price $0.025 per second of 720p video); `agnes-video-2.5` without "Flash" is billed. Offers end — check the page before you rely on it.
+**Video model — verified with [`agnes-video-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-video-25-flash).** Every rule in this repository was measured on it at 720p, in keyframe (first-frame) mode and in `reference` mode with a voice sample. Sign up and create an API key at **[platform.agnes-ai.com](https://platform.agnes-ai.com)**. On the [official price page](https://wiki.agnes-ai.com/en/docs/pricing), checked on 2026-09-11, `agnes-video-2.5-flash` is **free for a limited time** (list price $0.025 per second of 720p video); `agnes-video-2.5` without "Flash" is billed. Offers end — check the page before you rely on it.
 
 **Image model — your choice.** Keyframes and character cards have come from an OpenAI image model and from [`agnes-image-2.5-flash`](https://wiki.agnes-ai.com/en/docs/agnes-image-25-flash) (also listed at $0 on the same page). Other keyframe-capable image and video models, MiniMax's among them, fit the same gates; this repository has not tested them, so check their limits yourself.
 
@@ -73,7 +75,7 @@ In keyframe mode the video API has to fetch each image, and Agnes accepts only a
 |---|---|---|
 | **Agnes image → Agnes video.** `agnes-image-2.5-flash` returns a hosted image URL; pass that same URL to `agnes-video-2.5-flash` | No | ✅ Verified 2026-09-11 |
 | **Inline image data.** [MiniMax's video API](https://platform.minimax.io/docs/api-reference/video-generation-i2v) accepts the first frame as a Base64 data URL | No | 📄 Vendor docs only |
-| **Temporary static host.** A Firebase Hosting preview channel, or an object-storage bucket with a signed, expiring URL | Yes | ✅ Firebase verified; object storage not tested |
+| **Temporary static host.** A Cloudflare Pages preview deployment (static transfer not metered), a Firebase Hosting preview channel, or an object-storage bucket with a signed, expiring URL | Yes | ✅ Cloudflare Pages verified 2026-09-25 and used for every film since; Firebase verified; object storage not tested |
 | **Local server + tunnel.** Serve the keyframes from your own machine and expose them with a [Cloudflare quick tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/) — no account needed | Yes | ✅ Verified 2026-09-11 |
 
 What the two tests on 2026-09-11 showed:
@@ -81,6 +83,8 @@ What the two tests on 2026-09-11 showed:
 - **Agnes image → Agnes video worked with no hosting at all.** The image URL carried no expiry parameter and still loaded after the video finished, but how long Agnes keeps it is not documented — download a copy the moment you get it.
 - **A local server on its own is not enough.** `localhost` or a LAN address is invisible to the vendor, and most home connections have no public address. The tunnel provides one. Agnes fetched the image once, about 15 seconds after the task was submitted.
 - **Test the route from your own network.** The first tunnel attempt looked dead because the local DNS would not resolve the brand-new hostname; resolving it through a public DNS server showed it was fine. For users in mainland China in particular, Firebase and some public DNS servers may be unreachable — the Agnes-only route, or the local-server-plus-tunnel route, avoids the hosting service entirely.
+
+Since 2026-09-25 every film's keyframes have gone through Cloudflare Pages preview deployments: one busy month of Firebase previews had used up that project's free 10 GB of monthly Hosting transfer. Pages has no automatic expiry, so delete the previews when the film is done — and expect a deleted deployment to keep serving some files for a while.
 
 ## What some of the stages look like
 
@@ -158,7 +162,7 @@ Then ask your agent for a short video from a scene, and it should pick the skill
 
 ## Provenance
 
-Distilled from real production runs between September 8 and 11, 2026: two short technical demos, a 17-shot children's idiom film, and two episodes (18 and 20 shots) adapted from a novel. Each rule in `SKILL.md` records the run that paid for it. Verdicts on spoken language come from a human listening, never from automated analysis.
+Distilled from real production between September 8 and 30, 2026 — about 20 productions and more than 540 video-generation tasks: short technical demos; a 17-shot children's idiom film; two episodes (18 and 20 shots) adapted from a novel; a narrated lesson series; a 31-shot replication of a film's opening; and children's English read-along films, each with a vocabulary short. Each rule in `SKILL.md` records the run that paid for it. Verdicts on spoken language come from a human listening, never from automated analysis.
 
 ## License
 
