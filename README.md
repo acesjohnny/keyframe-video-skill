@@ -8,6 +8,8 @@
 
 适用于任何关键帧驱动的视频模型；基于 Agnes 视频 API（`agnes-video-2.5-flash`）编写并验证。
 
+> **不是演示稿，是在真实制作里一次次打磨出来的。** 这个 skill 里的每一条规则，都来自实际做片时踩过的坑或找到的解法：截至 2026 年 9 月 30 日，已经用它跑完约 **20 个真实视频项目**——儿童英语跟读片和读前生词短片、有旁白的系列课程片、带对白的剧情片段、一部电影开场的 31 镜复刻——累计 **540 多个视频生成任务**、约 **570 个成品片段**。只观察到一次的结论，skill 里都会注明「只是一个样本」。
+
 https://github.com/user-attachments/assets/033e52ba-caad-4a17-a287-36918fba43c4
 
 <p align="center"><sub>用这套流程做的 15 秒三镜头样片，带中文对白。原文件：<a href="examples/tangbao-hatches/tangbao-hatches.mp4">tangbao-hatches.mp4</a></sub></p>
