@@ -164,6 +164,10 @@ Then ask your agent for a short video from a scene, and it should pick the skill
 
 Distilled from real production between September 8 and 30, 2026 — about 20 productions and more than 540 video-generation tasks: short technical demos; a 17-shot children's idiom film; two episodes (18 and 20 shots) adapted from a novel; a narrated lesson series; a 31-shot replication of a film's opening; and children's English read-along films, each with a vocabulary short. Each rule in `SKILL.md` records the run that paid for it. Verdicts on spoken language come from a human listening, never from automated analysis.
 
+## Related
+
+- **[gpt-image-style-atlas](https://github.com/acesjohnny/gpt-image-style-atlas)** — one scene in 116 art styles, a side-by-side GPT Image 2 style reference with copy-ready prompts. Handy for choosing a look before you draw keyframes. ([browse online](https://acesjohnny.github.io/gpt-image-style-atlas/))
+
 ## License
 
 MIT for the skill and documentation — see [LICENSE](LICENSE). The sample media are provided for illustration; see the note above.

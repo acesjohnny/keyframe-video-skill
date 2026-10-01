@@ -166,6 +166,10 @@ cp SKILL.md ~/.claude/skills/keyframe-video-production/
 
 提煉自 2026 年 9 月 8 日至 30 日的實際製作——約 20 個專案、540 多個影片生成任務：幾個簡短的技術示範；一部 17 個鏡頭的兒童成語片；改編自小說的兩集（18 個與 20 個鏡頭）；一套有旁白的系列課程片；一部電影開場的 31 鏡復刻；以及兒童英語跟讀片，每篇配一支讀前生詞短片。`SKILL.md` 裡的每一條規則都記錄了是哪一次製作為它付出了代價。關於說話語言的判定一律來自人耳聆聽，從不來自自動分析。
 
+## 相關專案
+
+- **[gpt-image-style-atlas](https://github.com/acesjohnny/gpt-image-style-atlas)**：同一個畫面、116 種畫風的 GPT Image 2 風格對照卡，每張附可複製的提示詞。替關鍵影格挑畫風時可以先在這裡比一比。（[線上瀏覽](https://acesjohnny.github.io/gpt-image-style-atlas/)）
+
 ## 授權
 
 skill 與文件採用 MIT 授權，見 [LICENSE](LICENSE)。範例素材僅供說明，見上文。
