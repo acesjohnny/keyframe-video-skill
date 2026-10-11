@@ -99,6 +99,8 @@ Measured on `agnes-video-2.5-flash` in keyframe mode, 2026-09:
   Read it before declaring the model unknowable — and still report it as what the metadata claims, not as a
   version you verified, since a manifest's version field need not match a vendor's marketing name.
 
+- 
+
 Treat all of this as a dated observation about one vendor, not a guarantee. Re-check before relying on it.
 
 **A second image vendor is not a drop-in.** Swapping the keyframe generator to MiniMax `image-01` (2026-09-16,
@@ -129,6 +131,7 @@ one paid image) surfaced three limits in one attempt, all of which apply to any 
 7. **Every shot carries subtitles, overlaid locally.** No unsubtitled delivery. Subtitles are generated per shot from the script's line field at assembly and overlaid as PNG layers; the model's own burned-in captions are never used (the prompt keeps forbidding on-screen text, and a shot that came back with captions gets that band blurred before the overlay). Set 2026-09-09 after a 17-shot film came back with captions on 2 shots and none on the other 15.
 8. **Deliver the master only.** When the master exceeds the messaging size limit, say it can only be watched on the desktop app and give the path; never transcode a low-bitrate preview copy on your own initiative (2026-09-15).
 9. **Both language versions ship together.** When this skill is published, `SKILL.md` and `SKILL.zh.md` are rendered and pushed in the same round, and a rule change edits both sources (2026-09-21; supersedes the earlier "Chinese lags" arrangement).
+10. **Brand external content with the owner's badge only, no series captions.**
 
 ## Workflow
 
@@ -360,7 +363,7 @@ making is worth mirroring:
 
 Assemble it as: four standing blocks (AI-look / non-cinematic composition / light / colour) + a genre block +
 **a consistency block generated per shot from that shot's own constraints** + an anatomy block when people are
-present + a closing `no watermark, no text, no logo`. Then de-duplicate. Each of the four failures above cost a
+present + a closing `no watermark, no logo`. Then de-duplicate. Each of the four failures above cost a
 regenerated shot or a rebuilt clip, and each had a positive clause with no mirror.
 
 **Leave about a second of silence after each spoken line.** Ask for it in the prompt. Generated speech
@@ -601,6 +604,10 @@ Assemble with a normalization pass (uniform scale, fps, pixel format; silent tra
 ### 6. Record
 
 Write down what was produced and, in its own section, record what remains **unverified** — language verdict, billing, any anomaly — rather than burying it in prose. When the user later gives a verdict, write it back and say who judged it.
+
+### 7. Where the media lives
+
+Keep generated media out of the notes vault. Keyframes, cards, clips, job records, audio and render intermediates go to a separate media root that mirrors the project's folder layout; prompts, storyboards, edit lists, subtitles and verification notes stay with the project. Two rules keep a pipeline that resumes by "does the clip exist?" honest: **write new media to the mirror, and look for existing media in both places** — a clip that was moved must never count as missing, or it is resubmitted and billed again. A job record and its clip always move together. If the media drive is not mounted, stop; do not fall back to writing into the vault.
 
 ## Driving this from a local control surface
 
@@ -1055,7 +1062,7 @@ Generate the picture and the voice separately, and mix locally:
 - **Voice**: a TTS API returns one file per line, with a chosen voice id, fixed across the whole film. Line length is known before the shot list is finalised, so shot durations are planned from the audio rather than negotiated with the video model.
 - **Cost of a rewrite** drops to a few hundred characters of TTS instead of a regenerated clip, and subtitles are burned from the script itself, with speech recognition kept only as a tripwire.
 
-Measured on one vendor (MiniMax `t2a_v2`, 2026-09-23): 303 system voices (45 Mandarin, 6 Cantonese, the rest across a dozen languages), six models, eight emotion values, speed/volume/pitch, mp3 or wav. Two vendor limits worth writing down: **48 kHz was rejected** (32 kHz accepted), and **voice cloning, voice design ("design a voice from a description") and music generation were all unavailable on this account** (forbidden, plan not supported, or closed to new users — see *Voice* under the 31-shot pilot below); only the system voices worked. Treat these as one dated observation, not a guarantee.
+Measured on one vendor (MiniMax `t2a_v2`, 2026-09-23;): 303 system voices (45 Mandarin, 6 Cantonese, the rest across a dozen languages), six models, eight emotion values, speed/volume/pitch, mp3 or wav. Two vendor limits worth writing down: **48 kHz was rejected** (32 kHz accepted), and **voice cloning, voice design ("design a voice from a description") and music generation were all unavailable on this account** (forbidden, plan not supported, or closed to new users — see *Voice* under the 31-shot pilot below); only the system voices worked. Treat these as one dated observation, not a guarantee.
 
 ### Two audio-editing rules that cost a re-render each
 
@@ -1317,6 +1324,52 @@ video task was spent on it:
 - **The session scratch folder is wiped on restart.** A transcription helper kept there vanished when the session
   restarted overnight, and the next QC run silently produced nothing. Keep every helper script in the repository's
   tools folder, never in a temporary directory.
+
+## Lessons from a long faithful novel adaptation (2026-10-05/06)
+
+A novel adapted verbatim (every line from the book), about 6,100 planned shots. What carries to any project:
+
+### Cards hold only what never changes
+- A card describes fixed appearance only. Anything that changes shot to shot (what is in a hand, hat or cloak on or
+  off, a rope hanging or not, time of day) goes in the shot's first-frame text and props list. Written into the card,
+  it fights the shot every time.
+- **Attaching a card is an order to draw it.** A ghost still attached after she shattered came back whole; a grave
+  card attached before the burial put the grave in early; a figure meant to stay off-screen got drawn in because
+  his card was attached. Attach only what is visible in this frame at this moment.
+- Fixed sentences an assembler adds to every shot ("the speaker's face is visible", "nobody speaks") collide with
+  back-to-camera, off-screen and masked lines. Carry a per-line `delivery` field (onscreen / offscreen / masked /
+  back) and an optional `vocal_sounds` field, and choose the sentence from them. One main action per shot.
+
+### Child red line: wording and composition
+- The more forcefully a child-safety line is worded, the more likely the image service blocks it. "Child" in the
+  same paragraph as "no bare skin, not sexualised" was refused as sexual; "real skin texture with pores" in the
+  style block plus a child close-up was refused too. Use a short positive line instead (a wholesome, everyday,
+  family-film situation; nothing romantic).
+- Whenever a child is in frame, strip skin and pore wording from everything the prompt inherits: style block, the
+  style restatement at the end, card text (`fair skin` → `fair complexion`, `dog-skin cloak` → `dog-hide cloak`).
+  Back it with an assembler gate that refuses to emit a child shot still containing `skin` or `pores`, and apply
+  the same red line to flashbacks and dream shots, with no exemptions.
+- Clean words are not enough: upside-down face-to-face framing, two-shot close-ups with hands cupping a head, and
+  whispering at an ear all read as intimate. Review child shots for composition, not only for vocabulary.
+
+### Style and references
+- A style named in one sentence loses to the reference images. A "film still" style on cards drawn in a 3D style
+  came out almost the same as a "studio product" style. Changing the style means redrawing the cards; state the
+  style both at the start and again at the end of the prompt.
+- Check every reference image against the source text, not just against its card. First batch: a moon on a night
+  the book calls moonless, a European castle for a mass grave, a giant purple turnip for a wild radish, faceted
+  modern jewellery for an ancient pendant.
+- Chaining a shot's first frame to the previous clip's last frame saves little when every shot is written with its
+  own camera position: 27 of 330 shots (8%) against an estimated 30–40%.
+
+### Running unattended
+- A daemon that waits out the quota must parse both resume formats the CLI prints (`try again at Oct 6th, 2026
+  1:08 PM` and bare `1:08 PM`), log moderation refusals separately and never retry them, and read only the latest
+  attempt of an appended log (see *independent-review-gate*, keeping evidence).
+- A pause file is checked between batches only, so keep batches small (six shots) if another project needs to
+  take the account at short notice.
+- Wait for a background job by its process id. A loop that waits until no process matches a name can match its
+  own command line and wait forever.
 
 ## Round Isolation
 
