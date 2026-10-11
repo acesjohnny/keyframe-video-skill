@@ -980,6 +980,16 @@ model adds on its own stays a defect to trim or regenerate. Keep one clip per sh
 every shot (only shot 1 has a first frame; later shots carry identity by text), and for every shot that needs the
 unbroken take. Sequences are capped by the 12-second clip limit; a beat that needs more is two sequences.
 
+**When the queue is slow, fill every clip (the user, 2026-10-11).** On the free tier one clip can
+wait twenty minutes or more, so the number of submissions is the schedule. Plan by clip, not by "one line per shot":
+bring each clip close to 12 seconds with 2–4 sub-shots of 2–5 seconds (a line of dialogue ≈ Chinese characters ÷ 4.5
++ 0.8 s; a silent locked-off shot ≈ 3 s; a silent moving shot no more than 4 s). Packing the old 5–9-second shots as
+they are saves almost nothing — two of them overrun 12 seconds; the saving comes from shortening the sub-shots. Estimate
+on one 330-shot unit averaging 7 s: packing only → 264 submissions; shortened then packed → 213 (35% fewer), with the
+running time about 16% shorter — say so first when the running time is fixed. Dialogue stays word for word; a shot whose
+line cannot be read within the limit stays a clip of its own. **A sequence that changes location (outside the door → inside → outside) is
+under test on 2026-10-11; until it reports, pack only within one location.**
+
 **Status — verified 2026-09-21 on two clips of the same beat.** The first, written without the geometry, showed both
 failures above. The second changed only the wording in this section — screen direction stated once, the shoulder
 and frame edge named, one person per shot, the negatives mirrored — and both failures were gone: one woman, at the
@@ -1301,6 +1311,33 @@ video task was spent on it:
 - **An accent can be set by description.** "A native Australian English speaker with a clear, natural Australian
   accent (he says 'G'day, mate' the Australian way), no American accent" gave the chosen voice in one audition pair;
   ASR heard his "Aus" as "Oss", which is the Australian pronunciation. One sample, not a rule.
+
+### Designing more characters: identity layer, visible anchors, four views (2026-10-09)
+
+From a published face-library method (WeChat "远见明察", 2026-09-11; reviewed in `resources/ai-face-library-prompt-review-2026-10-09.md`)
+checked against the Hey Jack series. The article demonstrates realistic half-body portraits only; the adjustments for a
+3D children's series are ours.
+
+- **Write a new character in four fixed blocks, in this order:** bone structure (face shape, cheekbones, jaw), features
+  (eye shape, brows, nose, lips), one identity anchor, and — as a separate block per state — costume. Deciding the
+  temperament first and working down to the features converges on the model's one default face for that temperament.
+  Cartoon 3D homogenises faces further, so give every new character a different face shape and jaw.
+- **The anchor must be visible at thumbnail size.** A 2 mm mole works in a realistic close portrait and vanishes in a
+  wide 3D shot (see *A mark the model never draws is not an identity mark*). Prefer something asymmetric and large: a
+  one-sided hair clip or earring, a streak of different hair, a small scar through one eyebrow, one ear up and one
+  flopped. One anchor per character, never reused across the series; check it on every card and after any restyle.
+  Formalise anchors the series already shows rather than adding a new mark to an established character mid-series.
+- **Four-view sheet for the leads only:** front, three-quarter, profile and back full-length on one 16:9 sheet, equal
+  height, same pose, plain grey, the anchor identical in every view. A face-only reference forces the model to invent
+  the side it never saw when the character turns. Minor characters keep front/back plus face. If one view keeps
+  failing (say the back of a costume), the costume was never fully defined: fix the source card, do not re-roll the sheet.
+- **Face cards in a plain neutral top.** A face card in a costume carries that costume into other states' shots.
+- **Style is one swappable block; identity never changes with it.** Small jumps (3D render to toon shading) work in one
+  pass with the card attached. Large jumps (3D to black line art, ink, chibi) take two passes: first get the style right
+  from text with the face allowed to drift, then pull the face back with the card as reference. Reference strength is a
+  dial: high locks the face and ignores the style words; low takes the style and loosens the face.
+- **Not adopted:** compressing the bible to a 60-character anchor sentence per shot. This skill keeps the full bible
+  paragraph verbatim in every prompt; the anchor is one line inside it.
 
 ### Tools that bit
 
